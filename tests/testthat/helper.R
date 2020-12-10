@@ -1,6 +1,3 @@
-## attempt to activate a project, which is nice during development
-tryCatch(proj_set("."), error = function(e) NULL)
-
 ## If session temp directory appears to be, or be within, a project, there
 ## will be large scale, spurious test failures.
 ## The IDE sometimes leaves .Rproj files behind in session temp directory or
@@ -40,7 +37,13 @@ create_local_thing <- function(dir = file_temp(pattern = pattern),
   old_project <- proj_get_() # this could be `NULL`, i.e. no active project
   old_wd <- getwd()          # not necessarily same as `old_project`
 
-  withr::defer(fs::dir_delete(dir), envir = env)
+  withr::defer(
+    {
+      ui_done("Deleting temporary project: {ui_path(dir)}")
+      fs::dir_delete(dir)
+    },
+    envir = env
+  )
   ui_silence(
     switch(
       thing,
@@ -49,16 +52,24 @@ create_local_thing <- function(dir = file_temp(pattern = pattern),
     )
   )
 
-  withr::defer(setwd(old_wd), envir = env)
-  setwd(dir)
-
-  withr::defer(ui_silence(proj_set(old_project, force = TRUE)), envir = env)
+  withr::defer(proj_set(old_project, force = TRUE), envir = env)
   proj_set(dir)
 
-  invisible(dir)
+  withr::defer(
+    {
+      ui_done("Restoring original working directory: {ui_path(old_wd)}")
+      setwd(old_wd)
+    },
+    envir = env
+  )
+  setwd(proj_get())
+
+  invisible(proj_get())
 }
 
 toggle_rlang_interactive <- function() {
+  # TODO: consider setting options(rlang_backtrace_on_error = "reminder") when
+  # in non-interactive mode, to suppress full backtraces
   before <- getOption("rlang_interactive")
   after <- if (identical(before, FALSE)) TRUE else FALSE
   options(rlang_interactive = after)
@@ -76,9 +87,8 @@ skip_if_not_ci <- function() {
 }
 
 skip_if_no_git_user <- function() {
-  cfg <- git2r::config()
-  user_name <- cfg$local$`user.name` %||% cfg$global$`user.name`
-  user_email <- cfg$local$`user.email` %||% cfg$global$`user.email`
+  user_name <- git_cfg_get("user.name")
+  user_email <- git_cfg_get("user.email")
   user_name_exists <- !is.null(user_name)
   user_email_exists <- !is.null(user_email)
   if (user_name_exists && user_email_exists) {
@@ -88,7 +98,7 @@ skip_if_no_git_user <- function() {
 }
 
 # CRAN's mac builder sets $HOME to a read-only ram disk, so tests can fail if
-# you even tickle something that might try to lock it's own config file during
+# you even tickle something that might try to lock its own config file during
 # the operation (e.g. git) or if you simply test for writeability
 skip_on_cran_macos <- function() {
   sysname <- tolower(Sys.info()[["sysname"]])
@@ -97,6 +107,10 @@ skip_on_cran_macos <- function() {
     skip("On CRAN and on macOS")
   }
   invisible(TRUE)
+}
+
+with_mock <- function(..., .parent = parent.frame()) {
+  mockr::with_mock(..., .parent = .parent, .env = "usethis")
 }
 
 expect_usethis_error <- function(...) {

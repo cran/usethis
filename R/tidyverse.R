@@ -59,14 +59,12 @@ NULL
 #' @rdname tidyverse
 #' @inheritParams create_package
 #' @inheritParams licenses
-create_tidy_package <- function(path,
-                                name = "RStudio") {
+create_tidy_package <- function(path, copyright_holder = NULL) {
   path <- create_package(path, rstudio = TRUE, open = FALSE)
-  old_project <- proj_set(path)
-  on.exit(proj_set(old_project), add = TRUE)
+  local_project(path)
 
   use_testthat()
-  use_mit_license(name)
+  use_mit_license(copyright_holder)
   use_tidy_description()
 
   use_readme_rmd(open = FALSE)
@@ -175,7 +173,9 @@ use_dot_github <- function(ignore = TRUE) {
 #' @rdname tidyverse
 use_tidy_style <- function(strict = TRUE) {
   check_installed("styler")
-  check_uncommitted_changes()
+  challenge_uncommitted_changes(msg = "
+    There are uncommitted changes and it is highly recommended to get into a \\
+    clean Git state before restyling your project's code")
   if (is_package()) {
     styled <- styler::style_pkg(
       proj_get(),
@@ -214,9 +214,16 @@ tidy_release_test_env <- function() {
 
   c(
     "",
-    use_bullet("GitHub Actions (ubuntu-16.04)", c("3.3", "3.4", "3.5", "oldrel", "release", "devel")),
-    use_bullet("GitHub Actions (windows)", "release"),
-    use_bullet("Github Actions (macOS)", c("release", "devel")),
+    # intent is to stay in sync with this:
+    # https://github.com/r-lib/actions/blob/master/examples/check-full.yaml
+    use_bullet(
+      "GitHub Actions (ubuntu-16.04)",
+      c("devel", "release", "oldrel", "3.5", "3.4", "3.3")
+    ),
+    use_bullet("GitHub Actions (windows)", c("release", "oldrel")),
+    use_bullet("GitHub Actions (macOS)", "release"),
+    # other checks recommended in use_release_issue()
+    # currently, we aren't listing the extra checks for pkgs w/ compiled code
     use_bullet("win-builder", "devel"),
     ""
   )
@@ -226,62 +233,82 @@ tidy_release_test_env <- function() {
 #'
 #' Derives a list of GitHub usernames, based on who has opened issues or pull
 #' requests. Used to populate the acknowledgment section of package release blog
-#' posts at <https://www.tidyverse.org/blog/>. All arguments can potentially
-#' be determined from the active project, if the project follows standard
-#' practices around the GitHub remote and GitHub releases. Unexported helper
-#' functions, `releases()` and `ref_df()` can be useful interactively to get a
-#' quick look at release tag names and a data frame about refs (defaulting to
-#' releases), respectively.
+#' posts at <https://www.tidyverse.org/blog/>. If no arguments are given, we
+#' retrieve all contributors to the active project since its last (GitHub)
+#' release. Unexported helper functions, `releases()` and `ref_df()` can be
+#' useful interactively to get a quick look at release tag names and a data
+#' frame about refs (defaulting to releases), respectively.
 #'
-#' @param repo_spec GitHub repo specification in this form: `owner/repo`.
-#'   Default is to infer from Git remotes of active project.
+#' @param repo_spec Optional GitHub repo specification in any form accepted for
+#'   the `repo_spec` argument of [create_from_github()] (plain spec or a browser
+#'   or Git URL). A URL specification is the only way to target a GitHub host
+#'   other than `"github.com"`, which is the default.
 #' @param from,to GitHub ref (i.e., a SHA, tag, or release) or a timestamp in
-#'   ISO 8601 format, specifying the start or end of the interval of interest.
-#'   Examples: "08a560d", "v1.3.0", "2018-02-24T00:13:45Z", "2018-05-01". `NULL`
-#'   means there is no bound on that end of the interval.
+#'   ISO 8601 format, specifying the start or end of the interval of interest,
+#'   in the sense of `[from, to]`. Examples: "08a560d", "v1.3.0",
+#'   "2018-02-24T00:13:45Z", "2018-05-01". When `from = NULL, to = NULL`, we set
+#'   `from` to the timestamp of the most recent (GitHub) release. Otherwise,
+#'   `NULL` means "no bound".
 #'
 #' @return A character vector of GitHub usernames, invisibly.
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' ## active project, interval = since the last release
+#' # active project, interval = since the last release
 #' use_tidy_thanks()
 #'
-#' ## active project, interval = since a specific datetime
-#' use_tidy_thanks(from = "2018-02-24T00:13:45Z")
+#' # active project, interval = since a specific datetime
+#' use_tidy_thanks(from = "2020-07-24T00:13:45Z")
 #'
-#' ## r-lib/usethis, inteval = since a certain date
-#' use_tidy_thanks("r-lib/usethis", from = "2018-05-01")
+#' # r-lib/usethis, interval = since a certain date
+#' use_tidy_thanks("r-lib/usethis", from = "2020-08-01")
 #'
-#' ## r-lib/usethis, up to a specific release
-#' use_tidy_thanks("r-lib/usethis", from = NULL, to = "v1.3.0")
+#' # r-lib/usethis, up to a specific release
+#' use_tidy_thanks("r-lib/usethis", from = NULL, to = "v1.1.0")
 #'
-#' ## r-lib/usethis, since a specific commit, up to a specific date
+#' # r-lib/usethis, since a specific commit, up to a specific date
 #' use_tidy_thanks("r-lib/usethis", from = "08a560d", to = "2018-05-14")
+#'
+#' # r-lib/usethis, but with copy/paste of a browser URL
+#' use_tidy_thanks("https://github.com/r-lib/usethis")
 #' }
-use_tidy_thanks <- function(repo_spec = github_repo_spec(),
-                            from = releases(repo_spec)[[1]],
+use_tidy_thanks <- function(repo_spec = NULL,
+                            from = NULL,
                             to = NULL) {
-  from_timestamp <- as_timestamp(from, repo_spec) %||% "2008-01-01"
-  to_timestamp <- as_timestamp(to, repo_spec)
-  ui_done("Looking for contributors from {as.Date(from_timestamp)} to {to_timestamp %||% 'now'}")
+  repo_spec <- repo_spec %||% target_repo_spec()
+  parsed_repo_spec <- parse_repo_url(repo_spec)
+  repo_spec <- parsed_repo_spec$repo_spec
+  # this is the most practical way to propagate `host` to downstream helpers
+  if (!is.null(parsed_repo_spec$host)) {
+    withr::local_envvar(c(GITHUB_API_URL = parsed_repo_spec$host))
+  }
+
+  if (is.null(to)) {
+    from <- from %||% releases(repo_spec)[[1]]
+  }
+
+  from_timestamp <- as_timestamp(repo_spec, x = from) %||% "2008-01-01"
+  to_timestamp <- as_timestamp(repo_spec, x = to)
+  ui_done("
+    Looking for contributors from {as.Date(from_timestamp)} to \\
+    {to_timestamp %||% 'now'}")
 
   res <- gh::gh(
-    "/repos/:owner/:repo/issues",
+    "/repos/{owner}/{repo}/issues",
     owner = spec_owner(repo_spec), repo = spec_repo(repo_spec),
     since = from_timestamp,
     state = "all",
     filter = "all",
     .limit = Inf
   )
-  if (identical(res[[1]], "")) {
-    ui_line("No matching issues/PRs found.")
+  if (length(res) < 1) {
+    ui_oops("No matching issues/PRs found")
     return(invisible())
   }
 
   creation_time <- function(x) {
-    as.POSIXct(pluck_chr(x, "created_at"))
+    as.POSIXct(map_chr(x, "created_at"))
   }
 
   res <- res[creation_time(res) >= as.POSIXct(from_timestamp)]
@@ -294,7 +321,7 @@ use_tidy_thanks <- function(repo_spec = github_repo_spec(),
     return(invisible())
   }
 
-  contributors <- sort(unique(pluck_chr(res, c("user", "login"))))
+  contributors <- sort(unique(map_chr(res, c("user", "login"))))
   contrib_link <- glue("[&#x0040;{contributors}](https://github.com/{contributors})")
 
   ui_done("Found {length(contributors)} contributors:")
@@ -305,44 +332,52 @@ use_tidy_thanks <- function(repo_spec = github_repo_spec(),
 
 ## if x appears to be a timestamp, pass it through
 ## otherwise, assume it's a ref and look up its timestamp
-as_timestamp <- function(x = NULL, repo_spec = github_repo_spec()) {
-  if (is.null(x)) return(NULL)
+as_timestamp <- function(repo_spec, x = NULL) {
+  if (is.null(x)) {
+    return(NULL)
+  }
   as_POSIXct <- try(as.POSIXct(x), silent = TRUE)
-  if (inherits(as_POSIXct, "POSIXct")) return(x)
-  ui_line("Resolving timestamp for ref ", ui_value(x))
-  ref_df(x, repo_spec)$timestamp
+  if (inherits(as_POSIXct, "POSIXct")) {
+    return(x)
+  }
+  ui_done("Resolving timestamp for ref {ui_value(x)}")
+  ref_df(repo_spec, refs = x)$timestamp
 }
 
 ## returns a data frame on GitHub refs, defaulting to all releases
-ref_df <- function(refs = NULL, repo_spec = github_repo_spec()) {
+ref_df <- function(repo_spec, refs = NULL) {
+  stopifnot(is_string(repo_spec))
   refs <- refs %||% releases(repo_spec)
-  if (is.null(refs)) return(NULL)
+  if (is.null(refs)) {
+    return(NULL)
+  }
   get_thing <- function(thing) {
     gh::gh(
-      "/repos/:owner/:repo/commits/:thing",
-      owner = spec_owner(repo_spec), repo = spec_repo(repo_spec), thing = thing
+      "/repos/{owner}/{repo}/commits/{thing}",
+      owner = spec_owner(repo_spec), repo = spec_repo(repo_spec),
+      thing = thing
     )
   }
   res <- lapply(refs, get_thing)
   data.frame(
     ref = refs,
-    sha = substr(pluck_chr(res, "sha"), 1, 7),
-    timestamp = pluck_chr(res, c("commit", "committer", "date")),
+    sha = substr(map_chr(res, "sha"), 1, 7),
+    timestamp = map_chr(res, c("commit", "committer", "date")),
     stringsAsFactors = FALSE
   )
 }
 
 ## returns character vector of release tag names
-releases <- function(repo_spec = github_repo_spec()) {
+releases <- function(repo_spec) {
+  stopifnot(is_string(repo_spec))
   res <- gh::gh(
-    "/repos/:owner/:repo/releases",
-    owner = spec_owner(repo_spec),
-    repo = spec_repo(repo_spec)
+    "/repos/{owner}/{repo}/releases",
+    owner = spec_owner(repo_spec), repo = spec_repo(repo_spec)
   )
   if (length(res) < 1) {
     return(NULL)
   }
-  pluck_chr(res, "tag_name")
+  map_chr(res, "tag_name")
 }
 
 ## approaches based on available.packages() and/or installed.packages() present

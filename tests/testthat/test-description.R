@@ -18,15 +18,19 @@ test_that("usethis options > usethis defaults", {
   expect_equal(d$Version, "0.0.0.9000")
 })
 
-test_that("devtools options can be picked up", {
+test_that("usethis options > usethis defaults, even for Authors@R", {
   withr::local_options(list(
-    usethis.description = NULL,
-    devtools.desc = list(License = "TEST")
+    usethis.description = list(
+      "Authors@R" = utils::person("Jane", "Doe")
+    )
   ))
-
   d <- use_description_defaults()
-  expect_equal(d$License, "TEST")
-  expect_equal(d$Version, "0.0.0.9000")
+  expect_equal(
+    d$`Authors@R`,
+    "person(given = \"Jane\",\n       family = \"Doe\")"
+  )
+  expect_match(d$`Authors@R`, '^person[(]given = "Jane"')
+  expect_match(d$`Authors@R`, '"Doe"[)]$')
 })
 
 test_that("user's fields > options > defaults", {
@@ -41,8 +45,12 @@ test_that("user's fields > options > defaults", {
 })
 
 test_that("automatically converts person object to text", {
-  d <- use_description_defaults("pkg", fields = list(`Authors@R` = person("H", "W")))
-  expect_equal(d$`Authors@R`, "person(given = \"H\",\n       family = \"W\")")
+  d <- use_description_defaults(
+    "pkg",
+    fields = list(`Authors@R` = person("H", "W"))
+  )
+  expect_match(d$`Authors@R`, '^person[(]given = "H"')
+  expect_match(d$`Authors@R`, '"W"[)]$')
 })
 
 test_that("can set package", {
@@ -50,13 +58,17 @@ test_that("can set package", {
   expect_equal(d$Package, "TEST")
 })
 
-
+test_that("`roxygen = FALSE` is honoured", {
+  d <- use_description_defaults(roxygen = FALSE)
+  expect_null(d[["Roxygen"]])
+  expect_null(d[["RoxygenNote"]])
+})
 
 # use_description ---------------------------------------------------------
 
 test_that("creation succeeds even if options are broken", {
   withr::local_options(list(usethis.description = list(
-    `Authors@R` = 'person('
+    `Authors@R` = "person("
   )))
   create_local_project()
 

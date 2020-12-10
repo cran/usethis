@@ -11,15 +11,16 @@
 #'   `ui_info()`.
 #' * conditions: `ui_stop()`, `ui_warn()`.
 #' * questions: [ui_yeah()], [ui_nope()].
-#' * inline styles: `ui_field()`, `ui_value()`, `ui_path()`, `ui_code()`.
+#' * inline styles: `ui_field()`, `ui_value()`, `ui_path()`, `ui_code()`,
+#'   `ui_unset()`.
 #'
 #' The question functions [ui_yeah()] and [ui_nope()] have their own [help
 #' page][ui-questions].
 #'
 #' @section Silencing output:
 #' All UI output (apart from `ui_yeah()`/`ui_nope()` prompts) can be silenced
-#' by setting `options(usethis.quiet = TRUE)`. Use `ui_silence()` to selected
-#' actions.
+#' by setting `options(usethis.quiet = TRUE)`. Use `ui_silence()` to silence
+#' selected actions.
 #'
 #' @param x A character vector.
 #'
@@ -139,13 +140,10 @@ ui_warn <- function(x, .envir = parent.frame()) {
 # Silence -----------------------------------------------------------------
 
 #' @rdname ui
-#' @param code Code to execute with usually UI output silenced.
+#' @param code Code to execute with usual UI output silenced.
 #' @export
 ui_silence <- function(code) {
-  old <- options(usethis.quiet = TRUE)
-  on.exit(options(old))
-
-  code
+  withr::with_options(list(usethis.quiet = TRUE), code)
 }
 
 # Questions ---------------------------------------------------------------
@@ -207,6 +205,7 @@ ui_yeah <- function(x,
     qs <- sample(qs)
   }
 
+  # TODO: should this be ui_inform()?
   rlang::inform(x)
   out <- utils::menu(qs)
   out != 0L && qs[[out]] %in% yes
@@ -276,9 +275,23 @@ ui_code <- function(x) {
   x
 }
 
-# Cat wrappers ---------------------------------------------------------------
+#' @rdname ui
+#' @export
+ui_unset <- function(x = "unset") {
+  stopifnot(length(x) == 1)
+  x <- glue("<{x}>")
+  x <- crayon::silver(x)
+  x
+}
 
-ui_bullet <- function(x, bullet) {
+# rlang::inform() wrappers -----------------------------------------------------
+
+indent <- function(x, first = "  ", indent = first) {
+  x <- gsub("\n", paste0("\n", indent), x)
+  paste0(first, x)
+}
+
+ui_bullet <- function(x, bullet = cli::symbol$bullet) {
   bullet <- paste0(bullet, " ")
   x <- indent(x, bullet, "  ")
   ui_inform(x)
@@ -300,11 +313,8 @@ hd_line <- function(name) {
   ui_inform(crayon::bold(name))
 }
 
-kv_line <- function(key, value) {
-  if (is.null(value)) {
-    value <- crayon::silver("<unset>")
-  } else {
-    value <- ui_value(value)
-  }
-  ui_inform("* ", key, ": ", value)
+kv_line <- function(key, value, .envir = parent.frame()) {
+  value <- if (is.null(value)) ui_unset() else ui_value(value)
+  key <- glue(key, .envir = .envir)
+  ui_inform(glue("{cli::symbol$bullet} {key}: {value}"))
 }

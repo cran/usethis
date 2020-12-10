@@ -36,7 +36,7 @@ slug <- function(x, ext) {
   x_base <- path_ext_remove(x)
   x_ext <- path_ext(x)
   ext <- if (identical(tolower(x_ext), tolower(ext))) x_ext else ext
-  path_ext_set(x_base, ext)
+  as.character(path_ext_set(x_base, ext))
 }
 
 compact <- function(x) {
@@ -54,9 +54,6 @@ is_installed <- function(pkg) {
   requireNamespace(pkg, quietly = TRUE)
 }
 
-## mimimalist, type-specific purrr::pluck()'s
-pluck_chr <- function(l, what) vapply(l, `[[`, character(1), what)
-
 interactive <- function() {
   ui_stop(
     "Internal error: use rlang's {ui_code('is_interactive()')} \\
@@ -64,9 +61,14 @@ interactive <- function() {
   )
 }
 
-indent <- function(x, first = "  ", indent = first) {
-  x <- gsub("\n", paste0("\n", indent), x)
-  paste0(first, x)
+on.exit <- function(...) {
+  ui_stop("
+    Internal error: use withr's {ui_code('defer()')} and friends, \\
+    instead of {ui_code('base::on.exit()')}")
+}
+
+isFALSE <- function(x) {
+  identical(x, FALSE)
 }
 
 isNA <- function(x) {
@@ -76,8 +78,9 @@ isNA <- function(x) {
 path_first_existing <- function(...) {
   paths <- path(...)
   for (path in paths) {
-    if (file_exists(path))
+    if (file_exists(path)) {
       return(path)
+    }
   }
 
   NULL
@@ -85,4 +88,18 @@ path_first_existing <- function(...) {
 
 is_online <- function(host) {
   !is.null(curl::nslookup(host, error = FALSE))
+}
+
+year <- function() format(Sys.Date(), "%Y")
+
+pluck_lgl <- function(.x, ...) {
+  as_logical(purrr::pluck(.x, ..., .default = NA))
+}
+
+pluck_chr <- function(.x, ...) {
+  as_character(purrr::pluck(.x, ..., .default = NA))
+}
+
+pluck_int <- function(.x, ...) {
+  as_integer(purrr::pluck(.x, ..., .default = NA))
 }

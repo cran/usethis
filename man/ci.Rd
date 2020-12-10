@@ -12,17 +12,17 @@
 \usage{
 use_travis(browse = rlang::is_interactive(), ext = c("com", "org"))
 
-use_travis_badge(ext = c("com", "org"))
+use_travis_badge(ext = c("com", "org"), repo_spec = NULL)
 
 use_appveyor(browse = rlang::is_interactive())
 
-use_appveyor_badge()
+use_appveyor_badge(repo_spec = NULL)
 
 use_gitlab_ci()
 
 use_circleci(browse = rlang::is_interactive(), image = "rocker/verse:latest")
 
-use_circleci_badge()
+use_circleci_badge(repo_spec = NULL)
 }
 \arguments{
 \item{browse}{Open a browser window to enable automatic builds for the
@@ -31,18 +31,27 @@ package.}
 \item{ext}{Which travis website to use. Defaults to \code{"com"} for
 https://travis-ci.com. Change to \code{"org"} for https://travis-ci.org.}
 
+\item{repo_spec}{Optional GitHub repo specification in this form: \code{owner/repo}. This can usually be inferred from the GitHub remotes of active project.}
+
 \item{image}{The Docker image to use for build. Must be available on
 \href{https://hub.docker.com}{DockerHub}. The
-\href{https://hub.docker.com/r/rocker/verse}{rocker/verse} image includes TeX
-Live, pandoc, and the tidyverse packages. For a minimal image, try
+\href{https://hub.docker.com/r/rocker/verse}{rocker/verse} image includes
+TeXLive, pandoc, and the tidyverse packages. For a minimal image, try
 \href{https://hub.docker.com/r/rocker/r-ver}{rocker/r-ver}. To specify a version
 of R, change the tag from \code{latest} to the version you want, e.g.
 \verb{rocker/r-ver:3.5.3}.}
 }
 \description{
-Sets up continuous integration (CI) services for an R package that is
-developed on GitHub. CI services can run \verb{R CMD check} automatically on
-various platforms, triggered by each push or pull request. These functions
+\lifecycle{soft-deprecated}
+
+Some of these functions are now soft-deprecated since the tidyverse team has
+started using \href{https://github.com/features/actions}{GitHub Actions (GHA)} for
+continuous integration (CI). See \code{\link[=use_github_actions]{use_github_actions()}} for help configuring
+GHA. GHA functionality in usethis is actively maintained and exercised, which
+is no longer true for Travis-CI or AppVeyor.
+
+Sets up third-party continuous integration (CI) services for an R package
+that is developed on GitHub or, perhaps, GitLab. These functions
 \itemize{
 \item Add service-specific configuration files and add them to \code{.Rbuildignore}.
 \item Activate a service or give the user a detailed prompt.
@@ -77,16 +86,15 @@ where AppVeyor is already configured.
 
 \section{\code{use_gitlab_ci()}}{
 
-Adds a basic \code{.gitlab-ci.yml} to the top-level directory of a package. This is
-a configuration file for the \href{https://docs.gitlab.com/ee/ci/}{GitLab CI/CD} continuous
-integration service for GitLab.
+Adds a basic \code{.gitlab-ci.yml} to the top-level directory of a package. This
+is a configuration file for the \href{https://docs.gitlab.com/ee/ci/}{GitLab CI/CD} continuous integration service.
 }
 
 \section{\code{use_circleci()}}{
 
-Adds a basic \code{.circleci/config.yml} to the top-level directory of a package. This is a
-configuration file for the \href{https://circleci.com/}{CircleCI} continuous
-integration service.
+Adds a basic \code{.circleci/config.yml} to the top-level directory of a package.
+This is a configuration file for the \href{https://circleci.com/}{CircleCI}
+continuous integration service.
 }
 
 \section{\code{use_circleci_badge()}}{

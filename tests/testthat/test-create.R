@@ -10,20 +10,19 @@ test_that("create_project() creates a non-package project", {
   expect_false(is_package(dir))
 })
 
-test_that("create functions return path to new proj, but restore active proj", {
+test_that("create_*(open = FALSE) returns path to new proj, restores active proj", {
+  path <- file_temp()
   cur_proj <- proj_get_()
 
-  path <- file_temp()
-  new_path <- create_package(path)
+  out_path <- create_package(path, open = FALSE)
   expect_equal(proj_get_(), cur_proj)
-  expect_equal(proj_path_prep(path), new_path)
-  dir_delete(path)
+  expect_equal(proj_path_prep(path), out_path)
+  dir_delete(out_path)
 
-  path <- file_temp()
-  new_path <- create_project(path)
+  out_path <- create_project(path, open = FALSE)
   expect_equal(proj_get_(), cur_proj)
-  expect_equal(proj_path_prep(path), new_path)
-  dir_delete(path)
+  expect_equal(proj_path_prep(path), out_path)
+  dir_delete(out_path)
 })
 
 test_that("nested package is disallowed, by default", {
@@ -40,7 +39,7 @@ test_that("nested package can be created if user really, really wants to", {
   parent <- create_local_package()
   with_mock(
     # since user can't approve interactively, use the backdoor
-    `usethis:::allow_nested_project` = function() TRUE,
+    allow_nested_project = function() TRUE,
     child <- create_package(path(parent, "fghijk"))
   )
   expect_true(possibly_in_proj(child))
@@ -51,92 +50,90 @@ test_that("nested project can be created if user really, really wants to", {
   parent <- create_local_project()
   with_mock(
     # since user can't approve interactively, use the backdoor
-    `usethis:::allow_nested_project` = function() TRUE,
+    allow_nested_project = function() TRUE,
     child <- create_project(path(parent, "fghijk"))
   )
   expect_true(possibly_in_proj(child))
   expect_false(is_package(child))
 })
 
-test_that("can create package in current directory", {
-  # doing this "by hand" vs. via withr because Windows appears to be unwilling
-  # to delete current working directory
-  newdir <- dir_create(path(file_temp(), "mypackage"))
-  oldwd <- setwd(newdir)
-  on.exit({
-    setwd(oldwd)
-    dir_delete(newdir)
-  })
-  expect_error_free(create_package("."))
+test_that("can create package in current directory (literally in '.')", {
+  target_path <- dir_create(file_temp("mypackage"))
+  withr::defer(dir_delete(target_path))
+  withr::local_dir(target_path)
+  orig_proj <- proj_get_()
+  orig_wd <- path_wd()
+
+  expect_error_free(
+    out_path <- create_package(".", open = FALSE)
+  )
+  expect_equal(path_wd(), orig_wd)
+  expect_equal(proj_get_(), orig_proj)
 })
 
 ## https://github.com/r-lib/usethis/issues/227
-test_that("create_* works w/ non-existing rel path and absolutizes it", {
-  ## take care to provide a **non-absolute** path
-  path_package <- path_file(file_temp(pattern = "abc"))
-  withr::with_dir(
-    path_temp(),
-    create_package(path_package, rstudio = FALSE, open = FALSE)
-  )
-  expect_true(dir_exists(path_temp(path_package)))
+test_that("create_* works w/ non-existing rel path, open = FALSE case", {
+  sandbox <- path_real(dir_create(file_temp("sandbox")))
+  orig_proj <- proj_get_()
+  orig_wd <- path_wd()
+  withr::defer(dir_delete(sandbox))
+  withr::defer(proj_set(orig_proj, force = TRUE))
+  withr::local_dir(sandbox)
 
-  path_project <- path_file(file_temp(pattern = "abc"))
-  withr::with_dir(
-    path_temp(),
-    create_project(path_project, rstudio = FALSE, open = FALSE)
+  rel_path_pkg <- path_file(file_temp(pattern = "abc"))
+  expect_error_free(
+    out_path <- create_package(rel_path_pkg, open = FALSE)
   )
-  expect_true(dir_exists(path_temp(path_project)))
+  expect_true(dir_exists(rel_path_pkg))
+  expect_equal(out_path, proj_path_prep(rel_path_pkg))
+  expect_equal(proj_get_(), orig_proj)
+  expect_equal(path_wd(), sandbox)
+
+  rel_path_proj <- path_file(file_temp(pattern = "def"))
+  expect_error_free(
+    out_path <- create_project(rel_path_proj, open = FALSE)
+  )
+  expect_true(dir_exists(rel_path_proj))
+  expect_equal(out_path, proj_path_prep(rel_path_proj))
+  expect_equal(proj_get_(), orig_proj)
+  expect_equal(path_wd(), sandbox)
 })
 
-test_that("rationalize_fork() honors fork = FALSE", {
-  expect_false(
-    rationalize_fork(fork = FALSE, repo_info = list(), auth_token = "PAT")
-  )
-  expect_false(
-    rationalize_fork(fork = FALSE, repo_info = list(), auth_token = "")
-  )
-})
+# https://github.com/r-lib/usethis/issues/1122
+test_that("create_*() works w/ non-existing rel path, open = TRUE, not in RStudio", {
+  sandbox <- path_real(dir_create(file_temp("sandbox")))
+  orig_proj <- proj_get_()
+  withr::defer(dir_delete(sandbox))
+  withr::defer(proj_set(orig_proj, force = TRUE))
+  withr::local_dir(sandbox)
 
-test_that("rationalize_fork() won't attempt to fork w/o auth_token", {
-  expect_false(
-    rationalize_fork(fork = NA, repo_info = list(), auth_token = "")
-  )
-  expect_usethis_error(
-    rationalize_fork(fork = TRUE, repo_info = list(), auth_token = ""),
-    "No GitHub .+auth_token.+ is available"
-  )
-})
-
-test_that("rationalize_fork() won't attempt to fork repo owned by user", {
+  # package
+  rel_path_pkg <- path_file(file_temp(pattern = "ghi"))
   with_mock(
-    `usethis:::github_user` = function(auth_token) list(login = "USER"),
-    expect_usethis_error(
-      rationalize_fork(
-        fork = TRUE,
-        repo_info = list(full_name = "USER/REPO", owner = list(login = "USER")),
-        auth_token = "PAT"
-      ),
-      "Can't fork"
+    # make sure we act as if not in RStudio
+    rstudio_available = function(...) FALSE,
+    expect_error_free(
+      out_path <- create_package(rel_path_pkg, open = TRUE)
     )
   )
-})
+  exp_path_pkg <- path(sandbox, rel_path_pkg)
+  expect_equal(out_path, exp_path_pkg)
+  expect_equal(path_wd(), out_path)
+  expect_equal(proj_get(), out_path)
 
-test_that("rationalize_fork() forks by default iff user cannot push", {
-  expect_false(
-    rationalize_fork(
-      fork = NA,
-      repo_info = list(permissions = list(push = TRUE)),
-      auth_token = ""
+  setwd(sandbox)
+
+  # project
+  rel_path_proj <- path_file(file_temp(pattern = "jkl"))
+  with_mock(
+    # make sure we act as if not in RStudio
+    rstudio_available = function(...) FALSE,
+    expect_error_free(
+      out_path <- create_project(rel_path_proj, open = TRUE)
     )
   )
-  expect_true(
-    rationalize_fork(
-      fork = NA,
-      repo_info = list(
-        owner = list(login = "SOMEONE_ELSE"),
-        permissions = list(push = FALSE)
-      ),
-      auth_token = "PAT"
-    )
-  )
+  exp_path_proj <- path(sandbox, rel_path_proj)
+  expect_equal(out_path, exp_path_proj)
+  expect_equal(path_wd(), out_path)
+  expect_equal(proj_get(), out_path)
 })

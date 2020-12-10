@@ -1,4 +1,4 @@
-#' Create a vignette or article.
+#' Create a vignette or article
 #'
 #' Creates a new vignette or article in `vignettes/`. Articles are a special
 #' type of vignette that appear on pkgdown websites, but are not included
@@ -38,7 +38,7 @@ use_vignette <- function(name, title = name) {
 use_article <- function(name, title = name) {
   check_is_package("use_article()")
 
-  path <- use_vignette_template("article.Rmd", name, title)
+  use_vignette_template("article.Rmd", name, title)
   use_build_ignore("vignettes/articles")
 
   invisible()
@@ -56,7 +56,7 @@ use_vignette_template <- function(template, name, title) {
 
   data <- project_data()
   data$vignette_title <- title
-  data$braced_vignette_title <- glue::glue("{{{title}}}")
+  data$braced_vignette_title <- glue("{{{title}}}")
 
   use_template(template,
     save_as = path,

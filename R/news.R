@@ -8,15 +8,13 @@
 #'   Packages](https://r-pkgs.org).
 #' @export
 use_news_md <- function(open = rlang::is_interactive()) {
-  check_uncommitted_changes()
-
   use_template(
     "NEWS.md",
     data = package_data(),
     open = open
   )
 
-  git_ask_commit("Add NEWS.md")
+  git_ask_commit("Add NEWS.md", untracked = TRUE, paths = "NEWS.md")
 }
 
 use_news_heading <- function(version) {

@@ -8,31 +8,48 @@
 \usage{
 use_github_actions()
 
-use_github_actions_badge(name = "R-CMD-check")
+use_github_actions_badge(name = "R-CMD-check", repo_spec = NULL)
 }
 \arguments{
-\item{name}{The name to give to the \href{https://github.com/features/actions}{GitHub Actions} workflow.}
+\item{name}{Specifies the workflow whose status the badge will report. This
+is the \code{name} keyword that appears in the workflow \code{.yaml} file.}
+
+\item{repo_spec}{Optional GitHub repo specification in this form: \code{owner/repo}. This can usually be inferred from the GitHub remotes of active project.}
 }
 \description{
 Sets up continuous integration (CI) for an R package that is developed on
-GitHub using \href{https://github.com/features/actions}{GitHub Actions}. These functions
+GitHub using \href{https://github.com/features/actions}{GitHub Actions}. CI can be
+used to trigger various operations for each push or pull request, such as:
 \itemize{
-\item Add the necessary configuration files and place them in \code{.Rbuildignore}.
-\item Provide the markdown to insert a badge into your README
+\item Run \verb{R CMD check} on various operating systems and R versions
+\item Build and deploy a pkgdown site
+\item Determine test coverage
+}
+
+This family of functions
+\itemize{
+\item Adds the necessary configuration files and lists them in \code{.Rbuildignore}.
+\item Provides the markdown to insert a badge into your README.
 }
 }
 \section{\code{use_github_actions()}}{
 
-Adds a basic \code{R-CMD-check.yaml} file to the \code{.github/workflows} directory of a
-package. This is a configuration file for the \href{https://github.com/features/actions}{GitHub Actions} service.
+Configures a basic \verb{R CMD check} workflow on GitHub Actions by adding a
+standard \code{R-CMD-check.yaml} file to the \code{.github/workflows} directory of the
+active project.
 }
 
 \section{\code{use_github_actions_badge()}}{
 
-Only adds the \href{https://github.com/features/actions}{GitHub Actions} badge. Use for a project
-where GitHub Actions is already configured.
+Generates a GitHub Actions badge and that's all. It does not configure a
+workflow.
 }
 
 \seealso{
-\code{\link[=use_github_action]{use_github_action()}} for setting up a specific action.
+\itemize{
+\item \code{\link[=use_github_action]{use_github_action()}} sets up specific, individual actions, e.g. test
+coverage or pkgdown build and deploy.
+\item \code{\link[=use_tidy_github_actions]{use_tidy_github_actions()}} sets up the standard GitHub Actions used for
+tidyverse packages.
+}
 }

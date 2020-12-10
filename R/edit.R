@@ -16,20 +16,21 @@
 #' edit_file("~/.gitconfig")
 #' }
 edit_file <- function(path, open = rlang::is_interactive()) {
+  open <- open && is_interactive()
   path <- user_path_prep(path)
   create_directory(path_dir(path))
   file_create(path)
 
-  if (open) {
-    ui_todo("Modify {ui_path(path)}")
-
-    if (rstudioapi::isAvailable() && rstudioapi::hasFun("navigateToFile")) {
-      rstudioapi::navigateToFile(path)
-    } else {
-      utils::file.edit(path)
-    }
-  } else {
+  if (!open) {
     ui_todo("Edit {ui_path(path)}")
+    return(invisible(path))
+  }
+
+  ui_todo("Modify {ui_path(path)}")
+  if (rstudio_available() && rstudioapi::hasFun("navigateToFile")) {
+    rstudioapi::navigateToFile(path)
+  } else {
+    utils::file.edit(path)
   }
   invisible(path)
 }
@@ -41,14 +42,15 @@ edit_file <- function(path, open = rlang::is_interactive()) {
 #' * `edit_r_makevars()` opens `.R/Makevars`
 #' * `edit_git_config()` opens `.gitconfig` or `.git/config`
 #' * `edit_git_ignore()` opens `.gitignore`
-#' * `edit_rstudio_snippets(type)` opens `.R/snippets/{type}.snippets`
+#' * `edit_rstudio_snippets()` opens RStudio's snippet config for the given type.
+#' * `edit_rstudio_prefs()` opens RStudio's preference file.
 #'
-#' The `edit_r_*()` functions and `edit_rstudio_snippets()` consult R's notion
-#' of user's home directory. The `edit_git_*()` functions -- and \pkg{usethis}
-#' in general -- inherit home directory behaviour from the \pkg{fs} package,
-#' which differs from R itself on Windows. The \pkg{fs} default is more
-#' conventional in terms of the location of user-level Git config files. See
-#' [fs::path_home()] for more details.
+#' The `edit_r_*()` functions consult R's notion of user's home directory.
+#' The `edit_git_*()` functions (and \pkg{usethis} in general) inherit home
+#' directory behaviour from the \pkg{fs} package, which differs from R itself
+#' on Windows. The \pkg{fs} default is more conventional in terms of the
+#' location of user-level Git config files. See [fs::path_home()] for more
+#' details.
 #'
 #' Files created by `edit_rstudio_snippets()` will *mask*, not supplement,
 #' the built-in default snippets. If you like the built-in snippets, copy them
@@ -96,14 +98,29 @@ edit_r_makevars <- function(scope = c("user", "project")) {
 #' @export
 #' @rdname edit
 #' @param type Snippet type (case insensitive text).
-edit_rstudio_snippets <- function(type = c("r", "markdown", "c_cpp", "css",
-  "html", "java", "javascript", "python", "sql", "stan", "tex")) {
-  # RStudio snippets stored using R's definition of ~
-  # https://github.com/rstudio/rstudio/blob/4febd2feba912b2a9f8e77e3454a95c23a09d0a2/src/cpp/core/system/Win32System.cpp#L411-L458
+edit_rstudio_snippets <- function(type = c(
+                                    "r", "markdown", "c_cpp", "css",
+                                    "html", "java", "javascript", "python", "sql", "stan", "tex"
+                                    )) {
+
   type <- tolower(type)
   type <- match.arg(type)
+  file <- path_ext_set(type, "snippets")
 
-  path <- path_home_r(".R", "snippets", path_ext_set(type, "snippets"))
+  # Snippet location changed in 1.3:
+  # https://blog.rstudio.com/2020/02/18/rstudio-1-3-preview-configuration/
+  new_rstudio <- !rstudioapi::isAvailable() || rstudioapi::getVersion() >= "1.3.0"
+  old_path <- path_home_r(".R", "snippets", file)
+  new_path <- rstudio_config_path("snippets", file)
+
+  # Mimic RStudio behaviour: copy to new location if you edit
+  if (new_rstudio && file_exists(old_path) && !file_exists(new_path)) {
+    create_directory(path_dir(new_path))
+    file_copy(old_path, new_path)
+    ui_done("Copying snippets file to {ui_path(new_path)}")
+  }
+
+  path <- if (new_rstudio) new_path else old_path
   if (!file_exists(path)) {
     ui_done("New snippet file at {ui_path(path)}")
     ui_info(c(
@@ -114,7 +131,17 @@ edit_rstudio_snippets <- function(type = c("r", "markdown", "c_cpp", "css",
   edit_file(path)
 }
 
-scoped_path_r  <- function(scope = c("user", "project"), ..., envvar = NULL) {
+#' @export
+#' @rdname edit
+edit_rstudio_prefs <- function() {
+  path <- rstudio_config_path("rstudio-prefs.json")
+
+  edit_file(path)
+  ui_todo("Restart RStudio for changes to take effect")
+  invisible(path)
+}
+
+scoped_path_r <- function(scope = c("user", "project"), ..., envvar = NULL) {
   scope <- match.arg(scope)
 
   # Try environment variable in user scopes
@@ -157,7 +184,7 @@ edit_git_ignore <- function(scope = c("user", "project")) {
     ui_done("Setting up new global gitignore: {ui_path(file)}")
     # Describe relative to home directory
     path <- path("~", path_rel(file, path_home()))
-    git_config_set("core.excludesfile", path, global = TRUE)
+    gert::git_config_global_set("core.excludesfile", path)
     git_vaccinate()
   }
   invisible(edit_file(file))

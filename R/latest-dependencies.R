@@ -1,8 +1,7 @@
 #' Use "latest" versions of all dependencies
 #'
-#' Pins minimum version of dependencies to latest (as determined by "source)"
-#' Useful for tidyverse package, but should otherwise be used with extreme
-#' care.
+#' Pins minimum versions of dependencies to latest ones (as determined by `source`).
+#' Useful for the tidyverse package, but should otherwise be used with extreme care.
 #'
 #' @keywords internal
 #' @export
@@ -26,14 +25,10 @@ update_versions <- function(deps, overwrite = FALSE, source = c("local", "CRAN")
 
   packages <- deps$package[to_change]
   versions <- switch(match.arg(source),
-    local = purrr::map_chr(packages, package_version),
+    local = map_chr(packages, ~ as.character(utils::packageVersion(.x))),
     CRAN = utils::available.packages()[packages, "Version"]
   )
   deps$version[to_change] <- paste0(">= ", versions)
 
   deps
-}
-
-package_version <- function(x) {
-  as.character(utils::packageVersion(x))
 }

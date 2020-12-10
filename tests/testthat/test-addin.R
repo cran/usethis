@@ -1,5 +1,3 @@
-context("use_addin")
-
 test_that("use_addin() creates the first addins.dcf as promised", {
   create_local_package()
   use_addin("addin.test")
@@ -11,4 +9,3 @@ test_that("use_addin() creates the first addins.dcf as promised", {
   addin_dcf_expected[5] <- ""
   expect_equal(addin_dcf, addin_dcf_expected)
 })
-

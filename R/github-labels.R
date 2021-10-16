@@ -5,9 +5,9 @@
 #' and optionally delete GitHub's default labels (if `delete_default = TRUE`).
 #' It will never delete labels that have associated issues.
 #'
-#' `use_tidy_labels()` calls `use_github_labels()` with tidyverse conventions
-#' powered by `tidy_labels()`, `tidy_labels_rename()`, `tidy_label_colours()`
-#' and `tidy_label_descriptions()`.
+#' `use_tidy_github_labels()` calls `use_github_labels()` with tidyverse
+#' conventions powered by `tidy_labels()`, `tidy_labels_rename()`,
+#' `tidy_label_colours()` and `tidy_label_descriptions()`.
 #'
 #' @section Label usage:
 #' Labels are used as part of the issue-triage process, designed to minimise the
@@ -221,19 +221,7 @@ use_github_labels <- function(repo_spec = deprecated(),
 
 #' @export
 #' @rdname use_github_labels
-use_tidy_labels <- function(repo_spec = deprecated(),
-                            host = deprecated(),
-                            auth_token = deprecated()) {
-  if (lifecycle::is_present(repo_spec)) {
-    deprecate_warn_repo_spec("use_tidy_labels")
-  }
-  if (lifecycle::is_present(host)) {
-    deprecate_warn_host("use_tidy_labels")
-  }
-  if (lifecycle::is_present(auth_token)) {
-    deprecate_warn_auth_token("use_tidy_labels")
-  }
-
+use_tidy_github_labels <- function() {
   use_github_labels(
     labels = tidy_labels(),
     rename = tidy_labels_rename(),
@@ -272,6 +260,7 @@ tidy_label_colours <- function() {
     "bug" = "E0B3A2",
     "documentation" = "CBBAB8",
     "feature" = "B4C3AE",
+    "upkeep" = "C2ACC0",
     "good first issue :heart:" = "CBBAB8",
     "help wanted :heart:" = "C5C295",
     "reprex" = "C5C295",
@@ -285,6 +274,7 @@ tidy_label_descriptions <- function() {
   c(
     "bug" = "an unexpected problem or unintended behavior",
     "feature" = "a feature request or enhancement",
+    "upkeep" = "maintenance, infrastructure, and similar",
     "reprex" = "needs a minimal reproducible example",
     "wip" = "work in progress",
     "documentation" = "",

@@ -186,91 +186,6 @@ check_protocol <- function(protocol) {
   invisible()
 }
 
-#' Determine default Git branch
-#'
-#' Figure out the default branch of the current Git repo.
-#'
-#' @return A branch name
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' git_branch_default()
-#' }
-git_branch_default <- function() {
-  check_uses_git()
-  repo <- git_repo()
-
-  gb <- gert::git_branch_list(local = TRUE, repo = repo)[["name"]]
-  if (length(gb) == 1) {
-    return(gb)
-  }
-
-  # Check the most common names used for the default branch
-  gb <- set_names(gb)
-  usual_suspects_branchname <- c("main", "master", "default")
-  branch_candidates <- purrr::discard(gb[usual_suspects_branchname], is.na)
-
-  if (length(branch_candidates) == 1) {
-    return(branch_candidates[[1]])
-  }
-  # either 0 or >=2 of the usual suspects are present
-
-  # Can we learn what HEAD points to on a relevant Git remote?
-  gr <- git_remotes()
-  usual_suspects_remote <- c("upstream", "origin")
-  gr <- purrr::compact(gr[usual_suspects_remote])
-
-  if (length(gr)) {
-    remote_names <- set_names(names(gr))
-
-    # check symbolic ref, e.g. refs/remotes/origin/HEAD (a local operation)
-    remote_heads <- map(
-      remote_names,
-      ~ gert::git_remote_info(.x, repo = repo)$head
-    )
-    remote_heads <- purrr::compact(remote_heads)
-    if (length(remote_heads)) {
-      return(path_file(remote_heads[[1]]))
-    }
-
-    # ask the remote (a remote operation)
-    f <- function(x) {
-      dat <- gert::git_remote_ls(remote = x, verbose = FALSE, repo = repo)
-      path_file(dat$symref[dat$ref == "HEAD"])
-    }
-    f <- purrr::possibly(f, otherwise = NULL)
-    remote_heads <- purrr::compact(map(remote_names, f))
-    if (length(remote_heads)) {
-      return(remote_heads[[1]])
-    }
-  }
-  # no luck consulting usual suspects re: Git remotes
-  # go back to locally configured branches
-
-  # Is init.defaultBranch configured?
-  # https://github.blog/2020-07-27-highlights-from-git-2-28/#introducing-init-defaultbranch
-  init_default_branch <- git_cfg_get("init.defaultBranch")
-  if ((!is.null(init_default_branch)) && (init_default_branch %in% gb)) {
-    return(init_default_branch)
-  }
-
-  # take first existing branch from usual suspects
-  if (length(branch_candidates)) {
-    return(branch_candidates[[1]])
-  }
-
-  # take first existing branch
-  if (length(gb)) {
-    return(gb[[1]])
-  }
-
-  # I think this means we are on an unborn branch
-  ui_stop("
-    Can't determine the default branch for this repo
-    Do you need to make your first commit?")
-}
-
 #' Configure and report Git remotes
 #'
 #' Two helpers are available:
@@ -364,6 +279,47 @@ git_remotes <- function() {
   stats::setNames(as.list(x$url), x$name)
 }
 
+# unexported function to improve my personal quality of life
+git_clean <- function() {
+  if (!is_interactive() || !uses_git()) {
+    return(invisible())
+  }
+
+  st <- gert::git_status(staged = FALSE, repo = git_repo())
+  paths <- st[st$status == "new", ][["file"]]
+  n <- length(paths)
+  if (n == 0) {
+    ui_info("Found no untracked files")
+    return(invisible())
+  }
+
+  paths <- sort(paths)
+  ui_paths <- map_chr(paths, ui_path)
+  if (n > 10) {
+    ui_paths <- c(ui_paths[1:10], "...")
+  }
+
+  if (n == 1) {
+    file_hint <- "There is 1 untracked file:"
+  } else {
+    file_hint <- "There are {n} untracked files:"
+  }
+  ui_line(c(
+    file_hint,
+    paste0("* ", ui_paths)
+  ))
+
+  if (ui_yeah("
+
+    Do you want to remove {if (n == 1) 'it' else 'them'}?",
+    yes = "yes", no = "no", shuffle = FALSE)) {
+    file_delete(paths)
+    ui_done("{n} file(s) deleted")
+  }
+  rstudio_git_tickle()
+  invisible()
+}
+
 #' Git/GitHub sitrep
 #'
 #' Get a situation report on your current Git/GitHub status. Useful for
@@ -381,12 +337,15 @@ git_sitrep <- function() {
   hd_line("Git config (global)")
   kv_line("Name", git_cfg_get("user.name", "global"))
   kv_line("Email", git_cfg_get("user.email", "global"))
+  kv_line("Global (user-level) gitignore file", git_ignore_path("user"))
   vaccinated <- git_vaccinated()
   kv_line("Vaccinated", vaccinated)
   if (!vaccinated) {
     ui_info("See {ui_code('?git_vaccinate')} to learn more")
   }
   kv_line("Default Git protocol", git_protocol())
+  init_default_branch <- git_cfg_get("init.defaultBranch", where = "global")
+  kv_line("Default initial branch name", init_default_branch)
 
   # github (global / user) -----------------------------------------------------
   hd_line("GitHub")
@@ -421,7 +380,7 @@ git_sitrep <- function() {
   }
 
   # default branch -------------------------------------------------------------
-  kv_line("Default branch", git_branch_default())
+  default_branch_sitrep()
 
   # current branch -------------------------------------------------------------
   branch <- tryCatch(git_branch(), error = function(e) NULL)
@@ -439,7 +398,7 @@ git_sitrep <- function() {
   repo_host <- cfg$host_url
   if (!is.na(repo_host) && repo_host != default_gh_host) {
     kv_line("Non-default GitHub host", repo_host)
-    pat_sitrep(repo_host)
+    pat_sitrep(repo_host, scold_for_renviron = FALSE)
   }
 
   hd_line("GitHub remote configuration")
@@ -447,69 +406,33 @@ git_sitrep <- function() {
   invisible()
 }
 
-pat_sitrep <- function(host = "https://github.com") {
-  pat <- gh::gh_token(api_url = host)
-  have_pat <- pat != ""
-  if (!have_pat) {
-    kv_line("Personal access token for {ui_value(host)}", NULL)
-    ui_oops("
-      Call {ui_code('gh_token_help()')} for help configuring a token")
-    return(FALSE)
-  }
-
-  kv_line("Personal access token for {ui_value(host)}", "<discovered>")
+# TODO: when I really overhaul the UI, determine if I can just re-use the
+# git_default_branch() error messages in the sitrep
+# the main point is converting an error to an "oops" type of message
+default_branch_sitrep <- function() {
   tryCatch(
-    {
-      who <- gh::gh_whoami(.token = pat, .api_url = host)
-      kv_line("GitHub user", who$login)
-      scopes <- who$scopes
-      kv_line("Token scopes", who$scopes)
-      # https://docs.github.com/en/free-pro-team@latest/developers/apps/scopes-for-oauth-apps
-      # why these checks?
-      # previous defaults for create_github_token(): repo, gist, user:email
-      # more recently: repo, user, gist, workflow
-      # (gist scope is a very weak recommendation)
-      scopes <- strsplit(scopes, ", ")[[1]]
-      if (length(scopes) == 0 ||
-          !any(grepl("^repo$", scopes)) ||
-          !any(grepl("^workflow$", scopes)) ||
-          !any(grepl("^user(:email)?$", scopes))) {
+    kv_line("Default branch", git_default_branch()),
+    error_default_branch = function(e) {
+      if (has_name(e, "db_local")) {
+        # FYI existence of db_local implies existence of db_source
         ui_oops("
-            Token may be mis-scoped: {ui_value('repo')} and \\
-            {ui_value('user')} are highly recommended scopes
-            The {ui_value('workflow')} scope is needed to manage GitHub \\
-            Actions workflow files
-            If you are troubleshooting, consider this")
+          Default branch mismatch between local repo and remote!
+          {ui_value(e$db_source$name)} remote default branch: \\
+          {ui_value(e$db_source$default_branch)}
+          Local default branch: {ui_value(e$db_local)}
+          Call {ui_code('git_default_branch_rediscover()')} to resolve this.")
+      } else if (has_name(e, "db_source")) {
+        ui_oops("
+          Default branch mismatch between local repo and remote!
+          {ui_value(e$db_source$name)} remote default branch: \\
+          {ui_value(e$db_source$default_branch)}
+          Local repo has no branch by that name nor any other obvious candidates.
+          Call {ui_code('git_default_branch_rediscover()')} to resolve this.")
+      } else {
+        ui_oops("Default branch cannot be determined.")
       }
-    },
-    http_error_401 = function(e) ui_oops("Token is invalid"),
-    error = function(e) {
-      ui_oops("
-        Can't get user profile for this token. Is the network reachable?")
     }
   )
-  tryCatch(
-    {
-      emails <- gh::gh("/user/emails", .token = pat, .api_url = host)
-      addresses <- map_chr(
-        emails,
-        ~ if (.x$primary) glue_data(.x, "{email} (primary)") else .x[["email"]]
-      )
-      kv_line("Email(s)", addresses)
-      de_facto_email <- git_cfg_get("user.email", "de_facto")
-      if (!any(grepl(de_facto_email, addresses))) {
-        ui_oops("
-          User's Git email ({ui_value(de_facto_email)}) doesn't appear to be \\
-          registered with GitHub")
-      }
-    },
-    error = function(e) {
-      ui_oops("
-        Can't retrieve registered email address(es)
-        If you are troubleshooting, check GitHub host, token, and token scopes")
-    }
-  )
-  TRUE
 }
 
 # Vaccination -------------------------------------------------------------
@@ -519,19 +442,24 @@ pat_sitrep <- function(host = "https://github.com") {
 #' Adds `.DS_Store`, `.Rproj.user`, `.Rdata`, `.Rhistory`, and `.httr-oauth` to
 #' your global (a.k.a. user-level) `.gitignore`. This is good practice as it
 #' decreases the chance that you will accidentally leak credentials to GitHub.
+#' `git_vaccinate()` also tries to detect and fix the situation where you have a
+#' global gitignore file, but it's missing from your global Git config.
 #'
 #' @export
 git_vaccinate <- function() {
-  path <- git_ignore_path("user")
+  ensure_core_excludesFile()
+  path <- git_ignore_path(scope = "user")
+  if (!file_exists(path)) {
+    ui_done("Creating the global (user-level) gitignore: {ui_path(path)}")
+  }
   write_union(path, git_ignore_lines)
 }
 
 git_vaccinated <- function() {
   path <- git_ignore_path("user")
-  if (!file_exists(path)) {
+  if (is.null(path) || !file_exists(path)) {
     return(FALSE)
   }
-
   lines <- read_utf8(path)
   all(git_ignore_lines %in% lines)
 }

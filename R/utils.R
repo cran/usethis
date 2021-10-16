@@ -3,6 +3,18 @@ can_overwrite <- function(path) {
     return(TRUE)
   }
 
+  if (getOption("usethis.overwrite", FALSE)) {
+    # don't activate a project
+    # don't assume `path` is in the active project
+    if (is_in_proj(path) && uses_git()) {      # path is in active project
+      return(TRUE)
+    }
+    if (possibly_in_proj(path) &&              # path is some other project
+        with_project(proj_find(path), uses_git(), quiet = TRUE)) {
+      return(TRUE)
+    }
+  }
+
   if (is_interactive()) {
     ui_yeah("Overwrite pre-existing file {ui_path(path)}?")
   } else {
@@ -52,19 +64,6 @@ check_installed <- function(pkg) {
   rlang::check_installed(pkg)
 }
 
-interactive <- function() {
-  ui_stop(
-    "Internal error: use rlang's {ui_code('is_interactive()')} \\
-     instead of {ui_code('base::interactive()')}"
-  )
-}
-
-on.exit <- function(...) {
-  ui_stop("
-    Internal error: use withr's {ui_code('defer()')} and friends, \\
-    instead of {ui_code('base::on.exit()')}")
-}
-
 isFALSE <- function(x) {
   identical(x, FALSE)
 }
@@ -73,9 +72,10 @@ isNA <- function(x) {
   length(x) == 1 && is.na(x)
 }
 
-path_first_existing <- function(...) {
-  paths <- path(...)
-  for (path in paths) {
+path_first_existing <- function(paths) {
+  # manual loop with explicit use of `[[` to retain "fs" class
+  for (i in seq_along(paths)) {
+    path <- paths[[i]]
     if (file_exists(path)) {
       return(path)
     }
@@ -85,7 +85,8 @@ path_first_existing <- function(...) {
 }
 
 is_online <- function(host) {
-  !is.null(curl::nslookup(host, error = FALSE))
+  bare_host <- sub("^https?://(.*)$", "\\1", host)
+  !is.null(curl::nslookup(bare_host, error = FALSE))
 }
 
 year <- function() format(Sys.Date(), "%Y")
@@ -104,4 +105,19 @@ pluck_int <- function(.x, ...) {
 
 is_windows <- function() {
   .Platform$OS.type == "windows"
+}
+
+check_string <- function(x, nm = deparse(substitute(x))) {
+  if (!is_string(x)) {
+    ui_stop("{ui_code(nm)} must be a string.")
+  }
+  x
+}
+
+maybe_string <- function(x, nm = deparse(substitute(x))) {
+  if (is.null(x)) {
+    x
+  } else {
+    check_string(x, nm = nm)
+  }
 }

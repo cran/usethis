@@ -1,28 +1,3 @@
-use_description_field <- function(name,
-                                  value,
-                                  base_path = proj_get(),
-                                  overwrite = FALSE) {
-  # account for `value`s produced via `glue::glue()`
-  value <- as.character(value)
-  curr <- desc::desc_get(name, file = base_path)[[1]]
-  curr <- gsub("^\\s*|\\s*$", "", curr)
-
-  if (identical(curr, value)) {
-    return(invisible())
-  }
-
-  if (!is.na(curr) && !overwrite) {
-    ui_stop(
-      "{ui_field(name)} has a different value in DESCRIPTION. \\
-      Use {ui_code('overwrite = TRUE')} to overwrite."
-    )
-  }
-
-  ui_done("Setting {ui_field(name)} field in DESCRIPTION to {ui_value(value)}")
-  desc::desc_set(name, value, file = base_path)
-  invisible()
-}
-
 use_dependency <- function(package, type, min_version = NULL) {
   stopifnot(is_string(package))
   stopifnot(is_string(type))
@@ -52,7 +27,7 @@ use_dependency <- function(package, type, min_version = NULL) {
   if (!any(existing_dep) || any(is_linking_to)) {
     ui_done("Adding {ui_value(package)} to {ui_field(type)} field in DESCRIPTION")
     desc::desc_set_dep(package, type, version = version, file = proj_get())
-    return(invisible())
+    return(invisible(TRUE))
   }
 
   existing_type <- setdiff(existing_type, "LinkingTo")
@@ -63,6 +38,8 @@ use_dependency <- function(package, type, min_version = NULL) {
       "Package {ui_value(package)} is already listed in \\
       {ui_value(existing_type)} in DESCRIPTION, no change made."
     )
+
+    return(invisible(FALSE))
   } else if (delta == 0 && !is.null(min_version)) {
     # change version
     upgrade <- existing_ver == "*" || numeric_version(min_version) > version_spec(existing_ver)
@@ -86,7 +63,7 @@ use_dependency <- function(package, type, min_version = NULL) {
     }
   }
 
-  invisible()
+  invisible(TRUE)
 }
 
 use_system_requirement <- function(requirement) {

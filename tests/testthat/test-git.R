@@ -27,11 +27,14 @@ test_that("use_git_config() can set local config", {
   use_git_config(
     scope = "project",
     user.name = "Jane",
-    user.email = "jane@example.org"
+    user.email = "jane@example.org",
+    init.defaultBranch = "main"
   )
   r <- git_repo()
   expect_identical(git_cfg_get("user.name", "local"), "Jane")
   expect_identical(git_cfg_get("user.email", "local"), "jane@example.org")
+  expect_identical(git_cfg_get("init.defaultBranch", "local"), "main")
+  expect_identical(git_cfg_get("init.defaultbranch", "local"), "main")
 })
 
 test_that("use_git_config() can set a non-existing config field", {
@@ -87,31 +90,4 @@ test_that("git remote handlers work", {
 
   use_git_remote(name = "foo", url = NULL, overwrite = TRUE)
   expect_null(git_remotes())
-})
-
-test_that("git_branch_default() chooses a singleton branch", {
-  skip_if_no_git_user()
-
-  create_local_project()
-  use_git()
-  gert::git_add(".gitignore", repo = git_repo())
-  gert::git_commit("a commit, so we are not on an unborn branch", repo = git_repo())
-  expect_error_free(
-    b <- git_branch_default()
-  )
-  expect_length(b, 1)
-})
-
-test_that("git_branch_default() chooses usual suspect, if just 1 exists", {
-  skip_if_no_git_user()
-
-  create_local_project()
-  use_git()
-  gert::git_add(".gitignore", repo = git_repo())
-  gert::git_commit("a commit, so we are not on an unborn branch", repo = git_repo())
-  # I assume this will be 'main' or 'master', but prefer not to hard-wire
-  before <- git_branch_default()
-  gert::git_branch_create("foofy", repo = git_repo())
-  after <- git_branch_default()
-  expect_equal(before, after)
 })

@@ -128,7 +128,7 @@ local_project <- function(path = ".",
                           setwd = TRUE,
                           quiet = getOption("usethis.quiet", default = FALSE),
                           .local_envir = parent.frame()) {
-  withr::local_options(usethis.quiet = quiet)
+  withr::local_options(usethis.quiet = quiet, .local_envir = .local_envir)
 
   old_project <- proj_get_() # this could be `NULL`, i.e. no active project
   withr::defer(proj_set(path = old_project, force = TRUE), envir = .local_envir)
@@ -265,7 +265,7 @@ proj_activate <- function(path) {
   check_path_is_directory(path)
   path <- user_path_prep(path)
 
-  if (rstudio_available()) {
+  if (rstudio_available() && rstudioapi::hasFun("openProject")) {
     ui_done("Opening {ui_path(path, base = NA)} in new RStudio session")
     rstudioapi::openProject(path, newSession = TRUE)
     invisible(FALSE)

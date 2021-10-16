@@ -7,6 +7,7 @@
 use_github(
   organisation = NULL,
   private = FALSE,
+  visibility = c("public", "private", "internal"),
   protocol = git_protocol(),
   host = NULL,
   auth_token = deprecated(),
@@ -22,6 +23,12 @@ such that you have permission to create repositories in this
 
 \item{private}{If \code{TRUE}, creates a private repository.}
 
+\item{visibility}{Only relevant for organisation-owned repos associated with
+certain GitHub Enterprise products. The special "internal" \code{visibility}
+grants read permission to all organisation members, i.e. it's intermediate
+between "private" and "public", within GHE. When specified, \code{visibility}
+takes precedence over \code{private = TRUE/FALSE}.}
+
 \item{protocol}{One of "https" or "ssh"}
 
 \item{host}{GitHub host to target, passed to the \code{.api_url} argument of
@@ -33,7 +40,7 @@ For a hypothetical GitHub Enterprise instance, either
 "https://github.acme.com/api/v3" or "https://github.acme.com" is
 acceptable.}
 
-\item{auth_token, credentials}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}}: No longer
+\item{auth_token, credentials}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}: No longer
 consulted now that usethis uses the gert package for Git operations,
 instead of git2r; gert relies on the credentials package for auth. The API
 requests are now authorized with the token associated with the \code{host}, as

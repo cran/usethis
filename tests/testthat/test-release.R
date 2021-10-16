@@ -2,44 +2,56 @@
 # release bullets ---------------------------------------------------------
 
 test_that("release bullets don't change accidentally", {
-  # Avoid finding any files in real usethis project
-  # Take care to only change active project, but not working directory
-  # Temporary project name must be stable
-  tmpproj <- dir_create(path_temp("releasebullets"))
-  withr::defer(dir_delete(tmpproj))
-  file_create(path(tmpproj, ".here"))
-  local_project(tmpproj, setwd = FALSE)
+  create_local_package()
 
   # First release
   expect_snapshot(
-    cat(release_checklist("0.1.0", on_cran = FALSE), sep = "\n")
+    writeLines(release_checklist("0.1.0", on_cran = FALSE)),
+    transform = scrub_testpkg
   )
 
   # Patch release
   expect_snapshot(
-    cat(release_checklist("0.0.1", on_cran = TRUE), sep = "\n")
+    writeLines(release_checklist("0.0.1", on_cran = TRUE)),
+    transform = scrub_testpkg
   )
 
   # Major release
   expect_snapshot(
-    cat(release_checklist("1.0.0", on_cran = TRUE), sep = "\n")
+    writeLines(release_checklist("1.0.0", on_cran = TRUE)),
+    transform = scrub_testpkg
   )
 })
 
 test_that("get extra news bullets if available", {
+  env <- env(release_bullets = function() "Extra bullets")
+  expect_equal(release_extra(env), "* [ ] Extra bullets")
+
+  env <- env(release_questions = function() "Extra bullets")
+  expect_equal(release_extra(env), "* [ ] Extra bullets")
+
+  env <- env()
+  expect_equal(release_extra(env), character())
+})
+
+test_that("RStudio-ness detection works", {
   create_local_package()
 
-  standard <- release_checklist("1.0.0", TRUE)
+  expect_false(is_rstudio_funded())
+  expect_false(is_in_rstudio_org())
 
-  attach(
-    list(release_bullets = function() "Extra bullets"),
-    name = "extra",
-    warn.conflicts = FALSE
+  desc <- desc::desc(file = proj_get())
+  desc$add_author(given = "RStudio", role = "fnd")
+  desc$add_urls("https://github.com/tidyverse/WHATEVER")
+  desc$write()
+
+  expect_true(is_rstudio_funded())
+  expect_true(is_in_rstudio_org())
+
+  expect_snapshot(
+    writeLines(release_checklist("1.0.0", on_cran = TRUE)),
+    transform = scrub_testpkg
   )
-  withr::defer(detach("extra"))
-
-  new <- setdiff(release_checklist("1.0.0", TRUE), standard)
-  expect_equal(new, "* [ ] Extra bullets")
 })
 
 # news --------------------------------------------------------------------
@@ -80,4 +92,66 @@ test_that("returns empty string if no bullets", {
     "# Heading"
   )
   expect_equal(news_latest(lines), "")
+})
+
+# draft release ----------------------------------------------------------------
+test_that("get_release_data() works if no file found", {
+  skip_if_no_git_user()
+
+  local_interactive(FALSE)
+  create_local_package()
+  use_git()
+  gert::git_add(".gitignore")
+  gert::git_commit("we need at least one commit")
+
+  res <- get_release_data()
+  expect_equal(res$Version, "0.0.0.9000")
+  expect_match(res$SHA, "[[:xdigit:]]{40}")
+})
+
+test_that("get_release_data() works for old-style CRAN-RELEASE", {
+  skip_if_no_git_user()
+
+  local_interactive(FALSE)
+  create_local_package()
+  use_git()
+  gert::git_add(".gitignore")
+  gert::git_commit("we need at least one commit")
+  HEAD <- gert::git_info(repo = git_repo())$commit
+
+  write_utf8(
+    proj_path("CRAN-RELEASE"),
+    glue("
+      This package was submitted to CRAN on YYYY-MM-DD.
+      Once it is accepted, delete this file and tag the release (commit {HEAD}).")
+  )
+
+  res <- get_release_data(tr = list(repo_spec = "OWNER/REPO"))
+  expect_equal(res$Version, "0.0.0.9000")
+  expect_equal(res$SHA, HEAD)
+  expect_equal(path_file(res$file), "CRAN-RELEASE")
+})
+
+test_that("get_release_data() works for new-style CRAN-RELEASE", {
+  skip_if_no_git_user()
+
+  local_interactive(FALSE)
+  create_local_package()
+  use_git()
+  gert::git_add(".gitignore")
+  gert::git_commit("we need at least one commit")
+  HEAD <- gert::git_info(repo = git_repo())$commit
+
+  write_utf8(
+    proj_path("CRAN-SUBMISSION"),
+    glue("
+      Version: 1.2.3
+      Date: 2021-10-14 23:57:41 UTC
+      SHA: {HEAD}")
+  )
+
+  res <- get_release_data(tr = list(repo_spec = "OWNER/REPO"))
+  expect_equal(res$Version, "1.2.3")
+  expect_equal(res$SHA, HEAD)
+  expect_equal(path_file(res$file), "CRAN-SUBMISSION")
 })

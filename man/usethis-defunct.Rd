@@ -7,6 +7,10 @@
 \alias{browse_github_token}
 \alias{browse_github_pat}
 \alias{github_token}
+\alias{git_branch_default}
+\alias{use_tidy_labels}
+\alias{use_tidy_ci}
+\alias{use_github_action_check_full}
 \title{Defunct and deprecated functions in usethis}
 \usage{
 pr_pull_upstream()
@@ -18,6 +22,19 @@ browse_github_token(...)
 browse_github_pat(...)
 
 github_token()
+
+git_branch_default()
+
+use_tidy_labels()
+
+use_tidy_ci(...)
+
+use_github_action_check_full(
+  save_as = "R-CMD-check.yaml",
+  ignore = TRUE,
+  open = FALSE,
+  repo_spec = NULL
+)
 }
 \description{
 These functions have either been deprecated or removed from usethis.
@@ -49,6 +66,18 @@ These functions have been replaced by \code{\link[=create_github_token]{create_g
 
 All implicit and explicit token discovery routes through \code{\link[gh:gh_token]{gh::gh_token()}}
 now.
+}
+
+\section{\code{git_branch_default()}}{
+
+Please call \code{\link[=git_default_branch]{git_default_branch()}} instead. In hindsight, that is a better
+name for this function.
+}
+
+\section{\code{use_tidy_labels()}}{
+
+Please call \code{\link[=use_tidy_github_labels]{use_tidy_github_labels()}} instead. In hindsight, that is a
+better name for this function.
 }
 
 \keyword{internal}

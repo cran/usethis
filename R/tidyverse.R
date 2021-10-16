@@ -10,6 +10,9 @@
 #' of the tidyverse conventions as possible, issues a few reminders, and
 #' activates the new package.
 #'
+#' * `use_tidy_dependencies()`: sets up standard dependencies used by all
+#'   tidyverse packages (except packages that are designed to be dependency free).
+#'
 #' * `use_tidy_description()`: puts fields in standard order and alphabetises
 #'   dependencies.
 #'
@@ -36,6 +39,12 @@
 #' * `use_tidy_github()`: convenience wrapper that calls
 #' `use_tidy_contributing()`, `use_tidy_issue_template()`, `use_tidy_support()`,
 #' `use_tidy_coc()`.
+#'
+#' * [use_tidy_github_labels()] calls `use_github_labels()` to implement
+#'   tidyverse conventions around GitHub issue label names and colours.
+#'
+#' * `use_tidy_upkeep_issue()` creates an issue containing a checklist of
+#'   actions to bring your package up to current tidyverse standards.
 #'
 #' @section `use_tidy_style()`:
 #' Uses the [styler package](https://styler.r-lib.org) package to style all code
@@ -72,24 +81,18 @@ create_tidy_package <- function(path, copyright_holder = NULL) {
   use_cran_badge()
 
   use_cran_comments(open = FALSE)
-  use_tidy_release_test_env()
 
-  use_tidy_github()
   ui_todo("In the new package, remember to do:")
   ui_todo("{ui_code('use_git()')}")
   ui_todo("{ui_code('use_github()')}")
+  ui_todo("{ui_code('use_tidy_github()')}")
   ui_todo("{ui_code('use_tidy_github_actions()')}")
-  ui_todo("{ui_code('use_pkgdown()')}")
+  ui_todo("{ui_code('use_tidy_github_labels()')}")
+  ui_todo("{ui_code('use_pkgdown_github_pages()')}")
 
   proj_activate(path)
 }
 
-#' @export
-#' @rdname tidyverse
-#' @usage NULL
-use_tidy_ci <- function(...) {
-  ui_warn("`use_tidy_ci()` is deprecated; please use `use_tidy_github_actions()` instead")
-}
 
 #' @export
 #' @rdname tidyverse
@@ -97,7 +100,48 @@ use_tidy_description <- function() {
   desc <- desc::description$new(file = proj_get())
   tidy_desc(desc)
   desc$write()
+
+  ui_todo("Run {ui_code('devtools::document()')} to update package docs")
   invisible(TRUE)
+}
+
+#' @export
+#' @rdname tidyverse
+use_tidy_dependencies <- function() {
+  check_has_package_doc("use_tidy_dependencies()")
+
+  use_dependency("rlang", "Imports")
+  use_dependency("lifecycle", "Imports")
+  use_dependency("cli", "Imports")
+  use_dependency("glue", "Imports")
+  use_dependency("withr", "Imports")
+
+
+  # standard imports
+  imports <- any(
+    roxygen_ns_append("@import rlang"),
+    roxygen_ns_append("@importFrom glue glue"),
+    roxygen_ns_append("@importFrom lifecycle deprecated")
+  )
+  if (imports) {
+    roxygen_update_ns()
+  }
+
+  # add badges; we don't need the details
+  ui_silence(use_lifecycle())
+
+
+  # If needed, copy in lightweight purrr compatibility layer
+  if (!desc::desc(proj_get())$has_dep("purrr")) {
+    use_directory("R")
+    use_github_file(
+      "r-lib/rlang",
+      path = "R/compat-purrr.R",
+      save_as = "R/compat-purrr.R"
+    )
+  }
+
+  invisible()
 }
 
 #' @export
@@ -106,7 +150,7 @@ use_tidy_eval <- function() {
   check_is_package("use_tidy_eval()")
 
   use_dependency("roxygen2", "Suggests")
-  use_dependency("rlang", "Imports", min_version = "0.1.2")
+  use_dependency("rlang", "Imports", min_version = "0.4.11")
   new <- use_template("tidy-eval.R", "R/utils-tidy-eval.R")
 
   ui_todo("Run {ui_code('devtools::document()')}")
@@ -159,7 +203,7 @@ use_tidy_issue_template <- function() {
 #' @rdname tidyverse
 use_tidy_coc <- function() {
   use_dot_github()
-  use_code_of_conduct(path = ".github")
+  use_code_of_conduct("codeofconduct@rstudio.com", path = ".github")
 }
 
 #' @export
@@ -200,41 +244,6 @@ use_tidy_style <- function(strict = TRUE) {
   ui_line()
   ui_done("Styled project according to the tidyverse style guide")
   invisible(styled)
-}
-
-#' @export
-#' @rdname tidyverse
-use_tidy_release_test_env <- function() {
-  block_replace(
-    "release environment",
-    tidy_release_test_env(),
-    path = proj_path("cran-comments.md"),
-    block_start = "## Test environments",
-    block_end = "## R CMD check results"
-  )
-}
-
-tidy_release_test_env <- function() {
-  use_bullet <- function(name, versions) {
-    versions <- paste(versions, collapse = ", ")
-    glue("* {name}: {versions}")
-  }
-
-  c(
-    "",
-    # intent is to stay in sync with this:
-    # https://github.com/r-lib/actions/blob/master/examples/check-full.yaml
-    use_bullet(
-      "GitHub Actions (ubuntu-16.04)",
-      c("devel", "release", "oldrel", "3.5", "3.4", "3.3")
-    ),
-    use_bullet("GitHub Actions (windows)", c("release", "oldrel")),
-    use_bullet("GitHub Actions (macOS)", "release"),
-    # other checks recommended in use_release_issue()
-    # currently, we aren't listing the extra checks for pkgs w/ compiled code
-    use_bullet("win-builder", "devel"),
-    ""
-  )
 }
 
 #' Identify contributors via GitHub activity

@@ -2,15 +2,15 @@
 #'
 #' @description
 #' [pkgdown](https://pkgdown.r-lib.org) makes it easy to turn your package into
-#' a beautiful website. usethis provides two functions help you use pkgdown:
+#' a beautiful website. usethis provides two functions to help you use pkgdown:
 #'
-#' * `use_pkgdown()`: creates a pkgdown config file, adds relevant files or
-#'   directories to `.Rbuildignore` and `.gitignore`, and builds favicons if
-#'   your package has a logo.
+#' * `use_pkgdown()`: creates a pkgdown config file and adds relevant files or
+#'   directories to `.Rbuildignore` and `.gitignore`.
 #'
 #' * `use_pkgdown_github_pages()`: implements the GitHub setup needed to
 #'   automatically publish your pkgdown site to GitHub pages:
 #'
+#'   - (first, it calls `use_pkgdown()`)
 #'   - [use_github_pages()] prepares to publish the pkgdown site from the
 #'     `github-pages` branch
 #'   - [`use_github_action("pkgdown")`][use_github_action()] configures a
@@ -18,6 +18,9 @@
 #'     GitHub Pages
 #'   - The pkgdown site's URL is added to the pkgdown configuration file,
 #'     to the URL field of DESCRIPTION, and to the GitHub repo.
+#'   - Packages owned by certain GitHub organizations (tidyverse, r-lib, and
+#'     tidymodels) get some special treatment, in terms of anticipating the
+#'     (eventual) site URL and the use of a pkgdown template.
 #'
 #' `use_pkgdown_travis()` is deprecated; we no longer recommend that you use
 #' Travis-CI.
@@ -30,28 +33,37 @@ use_pkgdown <- function(config_file = "_pkgdown.yml", destdir = "docs") {
   check_is_package("use_pkgdown()")
   check_installed("pkgdown")
 
-  use_build_ignore(c(config_file, destdir))
-  use_build_ignore("pkgdown")
+  use_build_ignore(c(config_file, destdir, "pkgdown"))
   use_git_ignore(destdir)
 
-  ui_todo("
-    Record your site's {ui_field('url')} in the pkgdown config file \\
-    (optional, but recommended)")
-
-  if (has_logo()) {
-    pkgdown_build_favicons(proj_get(), overwrite = TRUE)
-  }
-
-  config <- proj_path(config_file)
-  if (!identical(destdir, "docs")) {
-    write_over(config, paste("destination:", destdir))
-  }
-  edit_file(config)
+  config <- pkgdown_config(destdir)
+  config_path <- proj_path(config_file)
+  write_over(config_path, yaml::as.yaml(config))
+  edit_file(config_path)
 
   invisible(TRUE)
 }
 
-# tidyverse pkgdown setup ------------------------------------------------------
+pkgdown_config <- function(destdir) {
+  config <- list(
+    url = NULL
+  )
+
+  if (pkgdown_version() >= "1.9000") {
+    config$template <- list(bootstrap = 5L)
+  }
+
+  if (!identical(destdir, "docs")) {
+    config$destination <- destdir
+  }
+
+  config
+}
+
+# wrapping because I need to be able to mock this in tests
+pkgdown_version <- function() {
+  utils::packageVersion("pkgdown")
+}
 
 #' @rdname use_pkgdown
 #' @export
@@ -65,38 +77,35 @@ use_pkgdown_github_pages <- function() {
   site_url <- sub("/$", "", site$html_url)
   site_url <- tidyverse_url(url = site_url, tr = tr)
   use_pkgdown_url(url = site_url, tr = tr)
+
+  if (tr$repo_owner %in% c("tidyverse", "tidymodels")) {
+    ui_done("
+      Adding {ui_value('tidyverse/tidytemplate')} to \\
+      {ui_field('Config/Needs/website')}")
+    use_description_list("Config/Needs/website", "tidyverse/tidytemplate")
+  }
 }
 
 # helpers ----------------------------------------------------------------------
 use_pkgdown_url <- function(url, tr = NULL) {
   tr <- tr %||% target_repo(github_get = TRUE)
 
-  config <- pkgdown_config_path()
-  config_lines <- read_utf8(config)
-  url_line <- paste0("url: ", url)
-  if (!any(grepl(url_line, config_lines))) {
-    ui_done("
-      Recording {ui_value(url)} as site's {ui_field('url')} in \\
-      {ui_path(config)}")
-    config_lines <- config_lines[!grepl("^url:", config_lines)]
-    write_utf8(config, c(
-      url_line,
-      if (length(config_lines) && nzchar(config_lines[[1]])) "",
-      config_lines
-    ))
+  config_path <- pkgdown_config_path()
+  ui_done("
+    Recording {ui_value(url)} as site's {ui_field('url')} in \\
+    {ui_path(config_path)}")
+  config <- pkgdown_config_meta()
+  if (has_name(config, "url")) {
+    config$url <- url
+  } else {
+    config <- c(url = url, config)
   }
+  write_utf8(config_path, yaml::as.yaml(config))
 
-  urls <- desc::desc_get_urls()
-  if (!url %in% urls) {
-    ui_done("Adding {ui_value(url)} to {ui_field('URL')} field in DESCRIPTION")
-    ui_silence(
-      use_description_field(
-        "URL",
-        glue_collapse(c(url, urls), ", "),
-        overwrite = TRUE
-      )
-    )
-  }
+  ui_done("Adding {ui_value(url)} to {ui_field('URL')} field in DESCRIPTION")
+  desc <- desc::desc(file = proj_get())
+  desc$add_urls(url)
+  desc$write()
 
   gh <- gh_tr(tr)
   homepage <- gh("GET /repos/{owner}/{repo}")[["homepage"]]
@@ -111,7 +120,8 @@ use_pkgdown_url <- function(url, tr = NULL) {
 
 tidyverse_url <- function(url, tr = NULL) {
   tr <- tr %||% target_repo(github_get = TRUE)
-  if (!is_interactive() || !tr$repo_owner %in% c("tidyverse", "r-lib")) {
+  if (!is_interactive() ||
+      !tr$repo_owner %in% c("tidyverse", "r-lib", "tidymodels")) {
     return(url)
   }
   custom_url <- glue("https://{tr$repo_name}.{tr$repo_owner}.org")
@@ -129,36 +139,37 @@ tidyverse_url <- function(url, tr = NULL) {
   }
 }
 
-pkgdown_config_path <- function(base_path = proj_get()) {
+pkgdown_config_path <- function() {
   path_first_existing(
-    base_path,
-    c(
-      "_pkgdown.yml",
-      "_pkgdown.yaml",
-      "pkgdown/_pkgdown.yml",
-      "inst/_pkgdown.yml"
+    proj_path(
+      c(
+        "_pkgdown.yml",
+        "_pkgdown.yaml",
+        "pkgdown/_pkgdown.yml",
+        "inst/_pkgdown.yml"
+      )
     )
   )
 }
 
-uses_pkgdown <- function(base_path = proj_get()) {
-  !is.null(pkgdown_config_path(base_path))
+uses_pkgdown <- function() {
+  !is.null(pkgdown_config_path())
 }
 
-pkgdown_config_meta <- function(base_path = proj_get()) {
-  if (!uses_pkgdown(base_path)) {
+pkgdown_config_meta <- function() {
+  if (!uses_pkgdown()) {
     return(list())
   }
-  path <- pkgdown_config_path(base_path)
+  path <- pkgdown_config_path()
   yaml::read_yaml(path) %||% list()
 }
 
-pkgdown_url <- function(base_path = proj_get(), pedantic = FALSE) {
-  if (!uses_pkgdown(base_path)) {
+pkgdown_url <- function(pedantic = FALSE) {
+  if (!uses_pkgdown()) {
     return(NULL)
   }
 
-  meta <- pkgdown_config_meta(base_path)
+  meta <- pkgdown_config_meta()
   url <- meta$url
   if (is.null(url)) {
     if (pedantic) {
@@ -191,15 +202,10 @@ use_pkgdown_travis <- function() {
 
   tr <- target_repo(github_get = TRUE)
 
-  use_build_ignore("docs/")
+  use_build_ignore(c("docs/", "pkgdown"))
   use_git_ignore("docs/")
   # TODO: suggest git rm -r --cache docs/
   # Can't currently detect if git known files in that directory
-
-  if (has_logo()) {
-    pkgdown_build_favicons(proj_get(), overwrite = TRUE)
-    use_build_ignore("pkgdown")
-  }
 
   ui_todo("
     Set up deploy keys by running {ui_code('travis::use_travis_deploy()')}")
@@ -217,10 +223,4 @@ use_pkgdown_travis <- function() {
   use_github_pages()
 
   invisible()
-}
-
-# usethis itself should not depend on pkgdown
-# all usage of this wrapper is guarded by `check_installed("pkgdown")`
-pkgdown_build_favicons <- function(...) {
-  get("build_favicons", asNamespace("pkgdown"), mode = "function")(...)
 }

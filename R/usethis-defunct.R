@@ -81,6 +81,51 @@ github_token <- function() {
   )
 }
 
+#' @section `git_branch_default()`:
+#' Please call [git_default_branch()] instead. In hindsight, that is a better
+#' name for this function.
+#' @export
+#' @rdname usethis-defunct
+git_branch_default <- function() {
+  lifecycle::deprecate_soft("2.1.0", "git_branch_default()", "git_default_branch()")
+  git_default_branch()
+}
+
+#' @section `use_tidy_labels()`:
+#' Please call [use_tidy_github_labels()] instead. In hindsight, that is a
+#' better name for this function.
+#' @export
+#' @rdname usethis-defunct
+use_tidy_labels <- function() {
+  lifecycle::deprecate_warn("2.1.0", "use_tidy_labels()", "use_tidy_github_labels()")
+  git_default_branch()
+}
+
+#' @export
+#' @rdname usethis-defunct
+use_tidy_ci <- function(...) {
+  lifecycle::deprecate_stop("2.1.0", "use_tidy_ci()", "use_tidy_github_actions()")
+}
+
+#' @export
+#' @rdname usethis-defunct
+use_github_action_check_full <- function(save_as = "R-CMD-check.yaml",
+                                         ignore = TRUE,
+                                         open = FALSE,
+                                         repo_spec = NULL) {
+  details <- glue("
+    It is overkill for the vast majority of R packages.
+    The \"check-full\" workflow is among those configured by \\
+    {ui_code('use_tidy_github_actions()')}.
+    If you really want it, request it by name with \\
+    {ui_code('use_github_action()')}.")
+  lifecycle::deprecate_stop(
+    "2.1.0",
+    "use_github_action_check_full()",
+    details = details
+  )
+}
+
 # git2r ------------------------------------------------------------------------
 git2r_explanation <- glue("
   usethis now uses the gert package for Git operations, instead of git2r, and

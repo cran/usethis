@@ -22,12 +22,12 @@ NULL
 
 #' @section `use_travis()`:
 #' Adds a basic `.travis.yml` to the top-level directory of a package. This is a
-#' configuration file for the [Travis CI](https://travis-ci.com/) continuous
+#' configuration file for the [Travis CI](https://www.travis-ci.com/) continuous
 #' integration service.
 #' @param browse Open a browser window to enable automatic builds for the
 #'   package.
 #' @param ext Which travis website to use. Defaults to `"com"` for
-#'   https://travis-ci.com. Change to `"org"` for https://travis-ci.org.
+#'   https://www.travis-ci.com/. Change to `"org"` for https://travis-ci.org.
 #' @export
 #' @rdname ci
 use_travis <- function(browse = rlang::is_interactive(),
@@ -54,8 +54,8 @@ use_travis <- function(browse = rlang::is_interactive(),
 }
 
 #' @section `use_travis_badge()`:
-#' Only adds the [Travis CI](https://travis-ci.com/) badge. Use for a project
-#'  where Travis is already configured.
+#' Only adds the Travis CI badge. Use for a project where Travis is already
+#' configured.
 #' @eval param_repo_spec()
 #' @export
 #' @rdname ci
@@ -63,7 +63,7 @@ use_travis_badge <- function(ext = c("com", "org"), repo_spec = NULL) {
   repo_spec <- repo_spec %||% target_repo_spec()
   ext <- arg_match(ext)
   url <- glue("https://travis-ci.{ext}/{repo_spec}")
-  img <- glue("{url}.svg?branch={git_branch_default()}")
+  img <- glue("{url}.svg?branch={git_default_branch()}")
   use_badge("Travis build status", url, img)
 }
 
@@ -124,7 +124,7 @@ use_appveyor_badge <- function(repo_spec = NULL) {
   repo_spec <- repo_spec %||% target_repo_spec()
   img <- glue(
     "https://ci.appveyor.com/api/projects/status/github/",
-    "{repo_spec}?branch={git_branch_default()}&svg=true"
+    "{repo_spec}?branch={git_default_branch()}&svg=true"
   )
   url <- glue("https://ci.appveyor.com/project/{repo_spec}")
   use_badge("AppVeyor build status", url, img)

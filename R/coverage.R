@@ -26,13 +26,9 @@ use_coverage <- function(type = c("codecov", "coveralls"), repo_spec = NULL) {
     coveralls = use_coveralls_badge(repo_spec)
   )
 
-  if (uses_travis()) {
-    ui_todo("Add to {ui_path('.travis.yml')}:")
-    ui_code_block("
-      after_success:
-        - Rscript -e 'covr::{type}()'
-      ")
-  }
+  ui_todo("
+    Call {ui_code('use_github_action(\"test-coverage\")')} to continuously \\
+    monitor test coverage.")
 
   invisible(TRUE)
 }
@@ -46,14 +42,14 @@ use_covr_ignore <- function(files) {
 }
 
 use_codecov_badge <- function(repo_spec) {
-  default_branch <- git_branch_default()
-  url <- glue("https://codecov.io/gh/{repo_spec}?branch={default_branch}")
+  default_branch <- git_default_branch()
+  url <- glue("https://app.codecov.io/gh/{repo_spec}?branch={default_branch}")
   img <- glue("https://codecov.io/gh/{repo_spec}/branch/{default_branch}/graph/badge.svg")
   use_badge("Codecov test coverage", url, img)
 }
 
 use_coveralls_badge <- function(repo_spec) {
-  default_branch <- git_branch_default()
+  default_branch <- git_default_branch()
   url <- glue("https://coveralls.io/r/{repo_spec}?branch={default_branch}")
   img <- glue("https://coveralls.io/repos/github/{repo_spec}/badge.svg")
   use_badge("Coveralls test coverage", url, img)

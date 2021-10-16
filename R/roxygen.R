@@ -32,12 +32,12 @@ use_roxygen_md <- function() {
   invisible()
 }
 
-uses_roxygen_md <- function(base_path = proj_get()) {
-  if (!desc::desc_has_fields("Roxygen", base_path)) {
+uses_roxygen_md <- function() {
+  if (!desc::desc_has_fields("Roxygen", file = proj_get())) {
     return(FALSE)
   }
 
-  roxygen <- desc::desc_get("Roxygen", base_path)[[1]]
+  roxygen <- desc::desc_get("Roxygen", file = proj_get())[[1]]
   value <- tryCatch(
     {
       eval(parse(text = roxygen))
@@ -50,8 +50,8 @@ uses_roxygen_md <- function(base_path = proj_get()) {
   isTRUE(value$markdown)
 }
 
-uses_roxygen <- function(base_path = proj_get()) {
-  desc::desc_has_fields("RoxygenNote", base_path)
+uses_roxygen <- function() {
+  desc::desc_has_fields("RoxygenNote", file = proj_get())
 }
 
 roxygen_ns_append <- function(tag) {
@@ -61,15 +61,37 @@ roxygen_ns_append <- function(tag) {
     path = proj_path(package_doc_path()),
     block_start = "## usethis namespace: start",
     block_end = "## usethis namespace: end",
-    block_suffix = "NULL"
+    block_suffix = "NULL",
+    sort = TRUE
   )
 }
 
-roxygen_update <- function() {
+roxygen_ns_show <- function() {
+  block_show(
+    path = proj_path(package_doc_path()),
+    block_start = "## usethis namespace: start",
+    block_end = "## usethis namespace: end"
+  )
+}
+
+roxygen_remind <- function() {
   ui_todo("Run {ui_code('devtools::document()')} to update {ui_path('NAMESPACE')}")
   TRUE
 }
 
+roxygen_update_ns <- function(load = is_interactive()) {
+  ui_done("Writing {ui_path('NAMESPACE')}")
+  utils::capture.output(
+    suppressMessages(roxygen2::roxygenise(proj_get(), "namespace"))
+  )
+
+  if (load) {
+    ui_done("Loading {project_name()}")
+    pkgload::load_all(quiet = TRUE)
+  }
+
+  TRUE
+}
 
 # Checkers ----------------------------------------------------------------
 

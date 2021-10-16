@@ -2,7 +2,7 @@
 % Please edit documentation in R/github-labels.R
 \name{use_github_labels}
 \alias{use_github_labels}
-\alias{use_tidy_labels}
+\alias{use_tidy_github_labels}
 \alias{tidy_labels}
 \alias{tidy_labels_rename}
 \alias{tidy_label_colours}
@@ -20,11 +20,7 @@ use_github_labels(
   auth_token = deprecated()
 )
 
-use_tidy_labels(
-  repo_spec = deprecated(),
-  host = deprecated(),
-  auth_token = deprecated()
-)
+use_tidy_github_labels()
 
 tidy_labels()
 
@@ -35,7 +31,7 @@ tidy_label_colours()
 tidy_label_descriptions()
 }
 \arguments{
-\item{repo_spec, host, auth_token}{\ifelse{html}{\figure{lifecycle-deprecated.svg}{options: alt='Deprecated lifecycle'}}{\strong{Deprecated}}: These
+\item{repo_spec, host, auth_token}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}: These
 arguments are now deprecated and will be removed in the future. Any input
 provided via these arguments is not used. The target repo, host, and auth
 token are all now determined from the current project's Git remotes.}
@@ -58,9 +54,9 @@ appear in the \code{labels} vector and that do not have associated issues.}
 and optionally delete GitHub's default labels (if \code{delete_default = TRUE}).
 It will never delete labels that have associated issues.
 
-\code{use_tidy_labels()} calls \code{use_github_labels()} with tidyverse conventions
-powered by \code{tidy_labels()}, \code{tidy_labels_rename()}, \code{tidy_label_colours()}
-and \code{tidy_label_descriptions()}.
+\code{use_tidy_github_labels()} calls \code{use_github_labels()} with tidyverse
+conventions powered by \code{tidy_labels()}, \code{tidy_labels_rename()},
+\code{tidy_label_colours()} and \code{tidy_label_descriptions()}.
 }
 \section{Label usage}{
 

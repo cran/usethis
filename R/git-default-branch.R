@@ -29,7 +29,7 @@
 #' Git repos you create in the future.
 #'
 
-#' @section `git_default_branch`:
+#' @section `git_default_branch()`:
 
 #' This figures out the default branch of the current Git repo, integrating
 #' information from the local repo and, if applicable, the `upstream` or
@@ -405,6 +405,9 @@ rediscover_default_branch <- function(old_name = NULL, report_on_source = TRUE) 
   # git branch -u origin/NEW-BRANCH-NAME NEW-BRANCH-NAME
   # git remote set-head origin -a
 
+  # optionally
+  # git remote prune origin
+
   # Note: they are assuming the relevant repo is known as origin, but it could
   # just as easily be, e.g., upstream.
 
@@ -427,7 +430,6 @@ rediscover_default_branch <- function(old_name = NULL, report_on_source = TRUE) 
   # for very stale repos, a fetch is a necessary pre-requisite
   # I provide `refspec = db` to avoid fetching all refs, which can be VERY slow
   # for a repo like ggplot2 (several minutes, with no progress reporting)
-  # however this means I can't do `prune = TRUE` to prune, e.g. origin/master
   gert::git_fetch(remote = tr$name, refspec = db, verbose = FALSE, repo = repo)
   gert::git_remote_ls(remote = tr$name, verbose = FALSE, repo = repo)
 
@@ -447,6 +449,16 @@ rediscover_default_branch <- function(old_name = NULL, report_on_source = TRUE) 
     repo = repo
   )
 
+  # goal: get rid of old remote tracking branch, e.g. origin/master
+  # goal, in Git-speak: git remote prune origin
+  # I provide a refspec to avoid fetching all refs, which can be VERY slow
+  # for a repo like ggplot2 (several minutes, with no progress reporting)
+  gert::git_fetch(
+    remote = tr$name,
+    refspec = glue("refs/heads/{old_name}:refs/remotes/{tr$name}/{old_name}"),
+    verbose = FALSE, repo = repo, prune = TRUE
+  )
+
   # for "ours" and "theirs", the source repo is the only remote on our radar and
   # we're done ingesting the default branch from the source repo
   # but for "fork", we also need to update
@@ -461,9 +473,13 @@ rediscover_default_branch <- function(old_name = NULL, report_on_source = TRUE) 
         from = old_name_fork,
         new_name = db
       )
-      # giving refspec has same pros and cons as noted above for source repo
       gert::git_fetch(remote = "origin", refspec = db, verbose = FALSE, repo = repo)
       gert::git_remote_ls(remote = "origin", verbose = FALSE, repo = repo)
+      gert::git_fetch(
+        remote = "origin",
+        refspec = glue("refs/heads/{old_name}:refs/remotes/origin/{old_name}"),
+        verbose = FALSE, repo = repo, prune = TRUE
+      )
     }
   }
 
@@ -568,6 +584,9 @@ fishy_badges <- function(old_name = "master") {
     block_start = badge_start,
     block_end = badge_end
   )
+  if (length(badge_lines_range) != 2) {
+    return(invisible(character()))
+  }
   badge_lines <- readme_lines[badge_lines_range[1]:badge_lines_range[2]]
 
   if (!any(grepl(old_name, badge_lines))) {

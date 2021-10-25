@@ -1,3 +1,13 @@
+# usethis 2.1.2
+
+Version bump strictly for CRAN submission purposes.
+
+# usethis 2.1.1
+
+`git_default_branch_rename()` no longer errors on repos where README exists, but has no badge block.
+
+`git_default_branch_rediscover()` prunes the defunct remote ref to the old default branch, e.g. `origin/master`.
+
 # usethis 2.1.0
 
 ## Git default branch support

@@ -1,7 +1,7 @@
-2624ccd2de5f4dad699ba78661f3cb26 *DESCRIPTION
+e9490adef116ecc7f3b05c0fa0256cf8 *DESCRIPTION
 764bb5aec2dc3bef4e44f1387ec895b3 *LICENSE
 5d5a0da035d3ae26edaf8f45b6188dee *NAMESPACE
-78d851b581046725a4a1c948be87a639 *NEWS.md
+bf18861db59d3a1d91260e217ea8f265 *NEWS.md
 4efe06b731ed3b39dda06394d21220e3 *R/addin.R
 8b4ce5691f66f7326bbe8ec9c76e28f1 *R/badge.R
 b4a1c6386b3c72ebc672eb2702b1cba3 *R/block.R
@@ -20,7 +20,7 @@ cc5069076ecd383a5d0bbf162cf773f3 *R/data-table.R
 d51fbcd720bbbfc595d7627293183aec *R/directory.R
 29fab823d9a1cfa4926cf7ce2580de7c *R/documentation.R
 a6edb21c86df4101192dc9882a136c44 *R/edit.R
-20432e9d1766fdf791e4d75a330542a3 *R/git-default-branch.R
+9fdd22cccc373c68a4e952a63e553b2c *R/git-default-branch.R
 810d6fb0f99cc98a061e81cc5500ce51 *R/git.R
 fd7d3fdb75fe0572ea6675b876e240cc *R/github-actions.R
 e10dee2ad78ceb7f5e2ddfc72dca72dc *R/github-labels.R
@@ -47,7 +47,7 @@ c21c97f54f3615f4f5496964e2eb8c4e *R/package.R
 9715b062d1c471d19ca126b1f552a541 *R/r.R
 f37870eccfe935e35ee5fff2212bb70d *R/rcpp.R
 92935bc7fd990dd3d38d0a6ffc8431fc *R/readme.R
-0f5f386f25d3ef689c01ff2756165604 *R/release.R
+e29ef2d1dc96e58ec0fba61deec4a13b *R/release.R
 855bbce379f173b44c7b8ad04a389aca *R/revdep.R
 7de9a6985934982fdc6468f007c4cc79 *R/rmarkdown.R
 b4afe8fa5f48424bb1be398c4f8ec714 *R/roxygen.R
@@ -151,7 +151,7 @@ c3978703d8f40f2679795335715e98f4 *man/figures/lifecycle-experimental.svg
 53b3f893324260b737b3c46ed2a0e643 *man/figures/lifecycle-stable.svg
 1c1fe7a759b86dc6dbcbe7797ab8246c *man/figures/lifecycle-superseded.svg
 553f7d586d7d13e1d9a51c6a1ca7d0f2 *man/figures/logo.png
-dcd6d909671b88acbb6cf2d5842c12a7 *man/git-default-branch.Rd
+d110c97a7282b95e81713bff0897674d *man/git-default-branch.Rd
 cf731932b1745a73cc3206b73e3c6f88 *man/git_credentials.Rd
 0ac8cb005cb03c2d3e9e3560b97910d4 *man/git_protocol.Rd
 f41d77ca070d07fdfabfeaaf2a1fa2d0 *man/git_sitrep.Rd

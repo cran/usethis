@@ -1,7 +1,7 @@
-e9490adef116ecc7f3b05c0fa0256cf8 *DESCRIPTION
+1100892a63b3d36edb390f98a99d05b7 *DESCRIPTION
 764bb5aec2dc3bef4e44f1387ec895b3 *LICENSE
 5d5a0da035d3ae26edaf8f45b6188dee *NAMESPACE
-bf18861db59d3a1d91260e217ea8f265 *NEWS.md
+c77cfeab44b85b913226df2d4cf34984 *NEWS.md
 4efe06b731ed3b39dda06394d21220e3 *R/addin.R
 8b4ce5691f66f7326bbe8ec9c76e28f1 *R/badge.R
 b4a1c6386b3c72ebc672eb2702b1cba3 *R/block.R
@@ -20,7 +20,7 @@ cc5069076ecd383a5d0bbf162cf773f3 *R/data-table.R
 d51fbcd720bbbfc595d7627293183aec *R/directory.R
 29fab823d9a1cfa4926cf7ce2580de7c *R/documentation.R
 a6edb21c86df4101192dc9882a136c44 *R/edit.R
-9fdd22cccc373c68a4e952a63e553b2c *R/git-default-branch.R
+a16bc47ff6c702852fbb4ebb1c216ba2 *R/git-default-branch.R
 810d6fb0f99cc98a061e81cc5500ce51 *R/git.R
 fd7d3fdb75fe0572ea6675b876e240cc *R/github-actions.R
 e10dee2ad78ceb7f5e2ddfc72dca72dc *R/github-labels.R
@@ -263,7 +263,7 @@ b7fb3ef24a5baed105e5a75eb9b95638 *tests/testthat/test-block.R
 ea6e987ef40d529799342169061728f2 *tests/testthat/test-browse.R
 f85f5b723a19b0bb32ef9b7ecbbc5e6f *tests/testthat/test-ci.R
 b279bd713dabebad7aec7a771c1fcb05 *tests/testthat/test-code-of-conduct.R
-511ae864849a2c2bc46cc6864b1a4089 *tests/testthat/test-course.R
+352217495c80c9f2f38ef7d624d70f23 *tests/testthat/test-course.R
 9d1e916ec07ffc0dd4fe140b80b7f654 *tests/testthat/test-cpp11.R
 429fff6097b4739fcf08c5aea867bf66 *tests/testthat/test-cran.R
 bcdc244da5e720dea23db8c543a199a8 *tests/testthat/test-create.R
@@ -275,7 +275,7 @@ bcdc244da5e720dea23db8c543a199a8 *tests/testthat/test-create.R
 e561ace1b857b308d6ff94959235fe38 *tests/testthat/test-edit.R
 965edde7df44a944d82e7b2de1024ac0 *tests/testthat/test-git-default-branch.R
 a3ea1ffaafec4580f55b1d612beb76dc *tests/testthat/test-git.R
-c157c6899803f896857b2d8913429d26 *tests/testthat/test-github-actions.R
+00ffacbe60d7767dbbd69f14e7ec3e94 *tests/testthat/test-github-actions.R
 2e21c8b76fc237dc073fbdf0f2df0f94 *tests/testthat/test-github_token.R
 2e09ed6855129f05b46d7f07f50812cf *tests/testthat/test-helpers.R
 78f6758cbac1d0bcb01ffacac2de48ad *tests/testthat/test-ignore.R
@@ -303,7 +303,7 @@ e3c5f3587528c3fe467aa9e111eaecec *tests/testthat/test-template.R
 75cf1321400b8c3a8b100ec422b16fad *tests/testthat/test-testthat.R
 c009e37e55002191ec28c51972741479 *tests/testthat/test-tibble.R
 d880dd81dcae7f17d142aa4ee7db0004 *tests/testthat/test-tidy-upkeep.R
-9443392ced113b5d1b7628952fb5f30b *tests/testthat/test-tidyverse.R
+b93ec556e728da8cb441c16b33781040 *tests/testthat/test-tidyverse.R
 6e3d0bc7c596eee67b4ff9646a21cc33 *tests/testthat/test-tutorial.R
 ae224e355733662cefea3cfb5d0681bf *tests/testthat/test-ui.R
 bb57f3391161b0658c4aa551b2964c20 *tests/testthat/test-use_github_file.R

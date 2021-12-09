@@ -109,7 +109,7 @@ create_project <- function(path,
 #' @description
 #' Creates a new local project and Git repository from a repo on GitHub, by
 #' either cloning or
-#' [fork-and-cloning](https://help.github.com/articles/fork-a-repo/). In the
+#' [fork-and-cloning](https://docs.github.com/articles/fork-a-repo). In the
 #' fork-and-clone case, `create_from_github()` also does additional remote and
 #' branch setup, leaving you in the perfect position to make a pull request with
 #' [pr_init()], one of several [functions that work pull
@@ -144,7 +144,7 @@ create_project <- function(path,
 #'   * The source repo, `repo_spec`, is configured as the `upstream` remote,
 #'   using the indicated `protocol`.
 #'   * The local `DEFAULT` branch is set to track `upstream/DEFAULT`, where
-#'   `DEFAULT` is typically `master` or `main`. It is also immediately pulled,
+#'   `DEFAULT` is typically `main` or `master`. It is also immediately pulled,
 #'   to cover the case of a pre-existing, out-of-date fork.
 #'
 #'   If `fork = NA` (the default), we check your permissions on `repo_spec`. If

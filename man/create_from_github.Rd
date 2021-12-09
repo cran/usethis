@@ -42,7 +42,7 @@ future pull requests:
 \item The source repo, \code{repo_spec}, is configured as the \code{upstream} remote,
 using the indicated \code{protocol}.
 \item The local \code{DEFAULT} branch is set to track \code{upstream/DEFAULT}, where
-\code{DEFAULT} is typically \code{master} or \code{main}. It is also immediately pulled,
+\code{DEFAULT} is typically \code{main} or \code{master}. It is also immediately pulled,
 to cover the case of a pre-existing, out-of-date fork.
 }
 
@@ -88,7 +88,7 @@ retrieved by \code{\link[gh:gh_token]{gh::gh_token()}}.}
 \description{
 Creates a new local project and Git repository from a repo on GitHub, by
 either cloning or
-\href{https://help.github.com/articles/fork-a-repo/}{fork-and-cloning}. In the
+\href{https://docs.github.com/articles/fork-a-repo}{fork-and-cloning}. In the
 fork-and-clone case, \code{create_from_github()} also does additional remote and
 branch setup, leaving you in the perfect position to make a pull request with
 \code{\link[=pr_init]{pr_init()}}, one of several \link[=pull-requests]{functions that work pull requests}.

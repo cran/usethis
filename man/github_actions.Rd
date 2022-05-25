@@ -12,10 +12,11 @@
 \usage{
 use_github_actions()
 
-use_github_actions_badge(name = "R-CMD-check", repo_spec = NULL)
+use_github_actions_badge(name = "R-CMD-check.yaml", repo_spec = NULL)
 
 use_github_action(
   name,
+  ref = NULL,
   url = NULL,
   save_as = NULL,
   readme = NULL,
@@ -25,32 +26,42 @@ use_github_action(
 
 use_github_action_check_release(
   save_as = "R-CMD-check.yaml",
+  ref = NULL,
   ignore = TRUE,
   open = FALSE
 )
 
 use_github_action_check_standard(
   save_as = "R-CMD-check.yaml",
+  ref = NULL,
   ignore = TRUE,
   open = FALSE
 )
 
 use_github_action_pr_commands(
   save_as = "pr-commands.yaml",
+  ref = NULL,
   ignore = TRUE,
   open = FALSE
 )
 }
 \arguments{
 \item{name}{For \code{use_github_action()}: Name of one of the example workflows
-from \url{https://github.com/r-lib/actions/tree/v1/examples}, with or without a
-\code{.yaml} extension, e.g. "pkgdown" or "test-coverage.yaml".
+from \url{https://github.com/r-lib/actions/tree/v2/examples}. Examples:
+"pkgdown", "check-standard.yaml".
 
-For \code{use_github_actions_badge()}: Specifies the workflow whose status the
-badge will report. Usually, this is the \code{name} keyword that appears in the
-workflow \code{.yaml} file.}
+For \code{use_github_actions_badge()}: Name of the workflow's YAML configuration
+file. Examples: "R-CMD-check", "R-CMD-check.yaml".
+
+If \code{name} has no extension, we assume it's \code{.yaml}.}
 
 \item{repo_spec}{Optional GitHub repo specification in this form: \code{owner/repo}. This can usually be inferred from the GitHub remotes of active project.}
+
+\item{ref}{Desired Git reference, usually the name of a tag (\code{"v2"}) or
+branch (\code{"main"}). Other possibilities include a commit SHA (\code{"d1c516d"})
+or \code{"HEAD"} (meaning "tip of remote's default branch"). If not specified,
+defaults to the latest published release of \code{r-lib/actions}
+(\url{https://github.com/r-lib/actions/releases}).}
 
 \item{url}{The full URL to a \code{.yaml} file on GitHub.}
 
@@ -102,7 +113,7 @@ documented here.
 
 Configures an individual, specific \href{https://github.com/features/actions}{GitHub Actions} workflow, either one of the
 examples from
-\href{https://github.com/r-lib/actions/tree/v1/examples}{r-lib/actions/examples}
+\href{https://github.com/r-lib/actions/tree/v2/examples}{r-lib/actions/examples}
 or a custom workflow given by the \code{url} parameter.
 
 Used internally to power all the other GitHub Actions functions, but it can

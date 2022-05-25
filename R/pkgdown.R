@@ -12,7 +12,7 @@
 #'
 #'   - (first, it calls `use_pkgdown()`)
 #'   - [use_github_pages()] prepares to publish the pkgdown site from the
-#'     `github-pages` branch
+#'     `gh-pages` branch
 #'   - [`use_github_action("pkgdown")`][use_github_action()] configures a
 #'     GitHub Action to automatically build the pkgdown site and deploy it via
 #'     GitHub Pages
@@ -68,7 +68,8 @@ pkgdown_version <- function() {
 #' @rdname use_pkgdown
 #' @export
 use_pkgdown_github_pages <- function() {
-  tr <- target_repo(github_get = TRUE)
+  tr <- target_repo(github_get = TRUE, ok_configs = c("ours", "fork"))
+  check_can_push(tr = tr, "to turn on GitHub Pages")
 
   use_pkgdown()
   site <- use_github_pages()
@@ -77,7 +78,7 @@ use_pkgdown_github_pages <- function() {
   site_url <- tidyverse_url(url = site$html_url, tr = tr)
   use_pkgdown_url(url = site_url, tr = tr)
 
-  if (tr$repo_owner %in% c("tidyverse", "tidymodels", "r-lib")) {
+  if (is_rstudio_pkg()) {
     ui_done("
       Adding {ui_value('tidyverse/tidytemplate')} to \\
       {ui_field('Config/Needs/website')}")
@@ -105,6 +106,10 @@ use_pkgdown_url <- function(url, tr = NULL) {
   desc <- desc::desc(file = proj_get())
   desc$add_urls(url)
   desc$write()
+  if (has_package_doc()) {
+    ui_todo("
+      Run {ui_code('devtools::document()')} to update package-level documentation.")
+  }
 
   gh <- gh_tr(tr)
   homepage <- gh("GET /repos/{owner}/{repo}")[["homepage"]]

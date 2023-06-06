@@ -35,7 +35,7 @@ test_that("parse_github_remotes() works on edge cases", {
 })
 
 test_that("parse_github_remotes() works for length zero input", {
-  expect_error_free(
+  expect_no_error(
     parsed <- parse_github_remotes(character())
   )
   expect_equal(nrow(parsed), 0)
@@ -117,7 +117,6 @@ test_that("github_remotes(), github_remote_list() accept explicit 0-row input", 
 })
 
 test_that("github_remotes() works", {
-  skip_on_cran()
   skip_if_offline("github.com")
   skip_if_no_git_user()
 
@@ -125,26 +124,26 @@ test_that("github_remotes() works", {
   use_git()
 
   # no git remotes = 0-row edge case
-  expect_error_free(
+  expect_no_error(
     grl <- github_remotes()
   )
 
   # a public remote = no token necessary to get github info
   use_git_remote("origin", "https://github.com/r-lib/usethis.git")
-  expect_error_free(
+  expect_no_error(
     grl <- github_remotes()
   )
   expect_false(grl$is_fork)
   expect_true(is.na(grl$parent_repo_owner))
 
   # no git remote by this name = 0-row edge case
-  expect_error_free(
+  expect_no_error(
     grl <- github_remotes("foofy")
   )
 
   # gh::gh() call should fail, so we should get no info from github
   use_git_remote("origin", "https://github.com/r-lib/DOESNOTEXIST.git", overwrite = TRUE)
-  expect_error_free(
+  expect_no_error(
     grl <- github_remotes()
   )
   expect_true(is.na(grl$is_fork))
@@ -175,10 +174,8 @@ test_that("fork_upstream_is_not_origin_parent is detected", {
   gr$can_push <- TRUE
   gr$perm_known <- TRUE
   gr$parent_repo_owner <- c("r-lib", NA)
-  with_mock(
-    github_remotes = function(...) gr,
-    cfg <- github_remote_config()
-  )
+  local_mocked_bindings(github_remotes = function(...) gr)
+  cfg <- github_remote_config()
   expect_equal(cfg$type, "fork_upstream_is_not_origin_parent")
   expect_snapshot(error = TRUE, stop_bad_github_remote_config(cfg))
 })

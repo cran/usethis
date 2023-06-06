@@ -34,12 +34,10 @@ test_that("use_readme_md() has expected form for a non-GitHub package", {
 test_that("use_readme_md() has expected form for a GitHub package", {
   skip_if_not_installed("rmarkdown")
   local_interactive(FALSE)
+  local_target_repo_spec("OWNER/TESTPKG")
 
   create_local_package()
-  with_mock(
-    target_repo_spec = function(...) "OWNER/TESTPKG",
-    use_readme_md()
-  )
+  use_readme_md()
   expect_snapshot(writeLines(read_utf8("README.md")), transform = scrub_testpkg)
 })
 
@@ -55,11 +53,9 @@ test_that("use_readme_rmd() has expected form for a non-GitHub package", {
 test_that("use_readme_rmd() has expected form for a GitHub package", {
   skip_if_not_installed("rmarkdown")
   local_interactive(FALSE)
+  local_target_repo_spec("OWNER/TESTPKG")
 
   create_local_package()
-  with_mock(
-    target_repo_spec = function(...) "OWNER/TESTPKG",
-    use_readme_rmd()
-  )
+  use_readme_rmd()
   expect_snapshot(writeLines(read_utf8("README.Rmd")), transform = scrub_testpkg)
 })

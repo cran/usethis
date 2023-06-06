@@ -16,8 +16,8 @@ use_roxygen_md <- function(overwrite = FALSE) {
   if (!uses_roxygen()) {
     roxy_ver <- as.character(utils::packageVersion("roxygen2"))
 
-    use_description_field("Roxygen", "list(markdown = TRUE)")
-    use_description_field("RoxygenNote", roxy_ver)
+    proj_desc_field_update("Roxygen", "list(markdown = TRUE)", overwrite = FALSE)
+    proj_desc_field_update("RoxygenNote", roxy_ver, overwrite = FALSE)
     ui_todo("Run {ui_code('devtools::document()')}")
     return(invisible())
   }
@@ -29,7 +29,7 @@ use_roxygen_md <- function(overwrite = FALSE) {
   }
 
   if (isFALSE(already_setup) || isTRUE(overwrite)) {
-    use_description_field("Roxygen", "list(markdown = TRUE)", overwrite = TRUE)
+    proj_desc_field_update("Roxygen", "list(markdown = TRUE)", overwrite = TRUE)
 
     check_installed("roxygen2md")
     ui_todo("
@@ -47,7 +47,7 @@ use_roxygen_md <- function(overwrite = FALSE) {
 
   ui_stop("
     {ui_path('DESCRIPTION')} already has a {ui_field('Roxygen')} field
-    Delete it and try agan or call {ui_code('use_roxygen_md(overwrite = TRUE)')}")
+    Delete it and try again or call {ui_code('use_roxygen_md(overwrite = TRUE)')}")
 
   invisible()
 }
@@ -56,12 +56,15 @@ use_roxygen_md <- function(overwrite = FALSE) {
 # TRUE: plain old "list(markdown = TRUE)"
 # NA: everything else
 uses_roxygen_md <- function() {
-  if (!desc::desc_has_fields("Roxygen", file = proj_get())) {
+  desc <- proj_desc()
+
+  if (!desc$has_fields("Roxygen")) {
     return(FALSE)
   }
 
-  roxygen <- desc::desc_get("Roxygen", file = proj_get())[[1]]
-  if (identical(roxygen, "list(markdown = TRUE)")) {
+  roxygen <- desc$get_field("Roxygen", "")
+  if (identical(roxygen, "list(markdown = TRUE)") ||
+      identical(roxygen, "list(markdown = TRUE, r6 = FALSE)")) {
     TRUE
   } else {
     NA
@@ -69,7 +72,7 @@ uses_roxygen_md <- function() {
 }
 
 uses_roxygen <- function() {
-  desc::desc_has_fields("RoxygenNote", file = proj_get())
+  proj_desc()$has_fields("RoxygenNote")
 }
 
 roxygen_ns_append <- function(tag) {

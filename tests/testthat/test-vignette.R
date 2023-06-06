@@ -24,15 +24,12 @@ test_that("use_vignette() does the promised setup", {
   ignores <- read_utf8(proj_path(".gitignore"))
   expect_true("inst/doc" %in% ignores)
 
-  deps <- desc::desc_get_deps(proj_get())
+  deps <- proj_deps()
   expect_true(
     all(c("knitr", "rmarkdown") %in% deps$package[deps$type == "Suggests"])
   )
 
-  expect_identical(
-    desc::desc_get_or_fail("VignetteBuilder", proj_get()),
-    c(VignetteBuilder = "knitr")
-  )
+  expect_identical(proj_desc()$get_field("VignetteBuilder"), "knitr")
 })
 
 # use_article -------------------------------------------------------------
@@ -42,6 +39,19 @@ test_that("use_article goes in article subdirectory", {
 
   use_article("test")
   expect_proj_file("vignettes/articles/test.Rmd")
+})
+
+test_that("use_article() adds rmarkdown to Config/Needs/website", {
+  create_local_package()
+  local_interactive(FALSE)
+
+  proj_desc_field_update("Config/Needs/website", "somepackage", append = TRUE)
+  use_article("name", "title")
+
+  expect_setequal(
+    proj_desc()$get_list("Config/Needs/website"),
+    c("rmarkdown", "somepackage")
+  )
 })
 
 # helpers -----------------------------------------------------------------

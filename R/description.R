@@ -27,11 +27,14 @@
 #' ```
 #' options(
 #'   usethis.description = list(
-#'     `Authors@R` = 'person("Jane", "Doe", email = "jane@example.com",
-#'                           role = c("aut", "cre"),
-#'                           comment = c(ORCID = "YOUR-ORCID-ID"))',
-#'     License = "MIT + file LICENSE",
-#'     Language =  "es"
+#'     "Authors@R" = utils::person(
+#'       "Jane", "Doe",
+#'       email = "jane@example.com",
+#'       role = c("aut", "cre"),
+#'       comment = c(ORCID = "YOUR-ORCID-ID")
+#'     ),
+#'     Language =  "es",
+#'     License = "MIT + file LICENSE"
 #'   )
 #' )
 #' ```
@@ -65,17 +68,7 @@ use_description <- function(fields = list(),
     check_package_name(name)
   }
 
-  desc <- build_description(name, roxygen = roxygen, fields = fields)
-
-  tf <- withr::local_tempfile(pattern = glue("use_description-{name}-"))
-  desc$write(file = tf)
-  tf_contents <- read_utf8(tf)
-  write_over(proj_path("DESCRIPTION"), tf_contents)
-
-  # explicit check of "usethis.quiet" since I'm not doing the printing
-  if (!getOption("usethis.quiet", default = FALSE)) {
-    desc$print()
-  }
+  proj_desc_create(name = name, fields = fields, roxygen = roxygen)
 }
 
 #' @rdname use_description
@@ -87,15 +80,7 @@ use_description_defaults <- function(package = NULL,
   fields <- fields %||% list()
   check_is_named_list(fields)
 
-  usethis <- list(
-    Package = package %||% "valid.package.name.goes.here",
-    Version = "0.0.0.9000",
-    Title = "What the Package Does (One Line, Title Case)",
-    Description = "What the package does (one paragraph).",
-    "Authors@R" = 'person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"), comment = c(ORCID = "YOUR-ORCID-ID"))',
-    License = "`use_mit_license()`, `use_gpl3_license()` or friends to pick a license",
-    Encoding = "UTF-8"
-  )
+  usethis <- usethis_description_defaults(package)
 
   if (roxygen) {
     if (is_installed("roxygen2")) {
@@ -132,12 +117,16 @@ use_description_defaults <- function(package = NULL,
   compact(defaults)
 }
 
-build_description <- function(package, roxygen = TRUE, fields = list()) {
-  fields <- use_description_defaults(package, roxygen = roxygen, fields)
-
-  desc <- desc::desc(text = glue("{names(fields)}: {fields}"))
-  tidy_desc(desc)
-  desc
+usethis_description_defaults <- function(package = NULL) {
+  list(
+    Package = package %||% "valid.package.name.goes.here",
+    Version = "0.0.0.9000",
+    Title = "What the Package Does (One Line, Title Case)",
+    Description = "What the package does (one paragraph).",
+    "Authors@R" = 'person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"), comment = c(ORCID = "YOUR-ORCID-ID"))',
+    License = "`use_mit_license()`, `use_gpl3_license()` or friends to pick a license",
+    Encoding = "UTF-8"
+  )
 }
 
 check_package_name <- function(name) {
@@ -162,61 +151,4 @@ tidy_desc <- function(desc) {
   # Normalize all fields (includes reordering)
   # Wrap in a try() so it always succeeds, even if user options are malformed
   try(desc$normalize(), silent = TRUE)
-}
-
-# 2021-10-10, while adding use_description_list(), I moved this helper here
-#
-# this helper feels out-of-sync with current usethis practices around active
-# project and how overwrite is handled
-#
-# I won't change use_description_field() now, but use_description_list() is
-# implemented differently, more in keeping with our current style
-use_description_field <- function(name, value, overwrite = FALSE) {
-  # account for `value`s produced via `glue::glue()`
-  value <- as.character(value)
-  curr <- desc::desc_get(name, file = proj_get())[[1]]
-  curr <- gsub("^\\s*|\\s*$", "", curr)
-
-  if (identical(curr, value)) {
-    return(invisible())
-  }
-
-  if (!is.na(curr) && !overwrite) {
-    ui_stop(
-      "{ui_field(name)} has a different value in DESCRIPTION. \\
-      Use {ui_code('overwrite = TRUE')} to overwrite."
-    )
-  }
-
-  ui_done("Setting {ui_field(name)} field in DESCRIPTION to {ui_value(value)}")
-  desc::desc_set(name, value, file = proj_get())
-  invisible()
-}
-
-use_description_list <- function(key,
-                                 values,
-                                 append = TRUE,
-                                 desc = NULL) {
-  desc_provided <- !is.null(desc)
-  desc <- desc %||% desc::desc(file = proj_get())
-  check_string(key)
-  stopifnot(is.character(values))
-
-  if (append) {
-    values <- unique(c(desc$get_list(key, default = ""), values))
-  }
-  # formatting needs some improvements
-  # https://github.com/r-lib/desc/issues/117
-  desc$set_list(key, values, sep = ",\n")
-
-  if (desc_provided) {
-    return(invisible())
-  }
-
-  tf <- withr::local_tempfile(
-    pattern = glue("use_description_list-{project_name()}-{path_sanitize(key, '-')}")
-  )
-  desc$write(file = tf)
-  tf_contents <- read_utf8(tf)
-  write_over(proj_path("DESCRIPTION"), tf_contents)
 }

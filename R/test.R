@@ -1,7 +1,7 @@
 #' Sets up overall testing infrastructure
 #'
 #' Creates `tests/testthat/`, `tests/testthat.R`, and adds the testthat package
-#' to the Suggests field. Learn more in <https://r-pkgs.org/tests.html>
+#' to the Suggests field. Learn more in <https://r-pkgs.org/testing-basics.html>
 #'
 #' @param edition testthat edition to use. Defaults to the latest edition, i.e.
 #'   the major version number of the currently installed testthat.
@@ -37,12 +37,12 @@ use_testthat_impl <- function(edition = NULL, parallel = FALSE) {
     edition <- check_edition(edition)
 
     use_dependency("testthat", "Suggests", paste0(edition, ".0.0"))
-    use_description_field("Config/testthat/edition", edition, overwrite = TRUE)
+    proj_desc_field_update("Config/testthat/edition", as.character(edition), overwrite = TRUE)
 
     if (parallel) {
-      use_description_field("Config/testthat/parallel", "true", overwrite = TRUE)
+      proj_desc_field_update("Config/testthat/parallel", "true", overwrite = TRUE)
     } else {
-      desc::desc_del("Config/testthat/parallel", file = proj_get())
+      proj_desc()$del("Config/testthat/parallel")
     }
   } else {
     if (!is.null(edition)) {

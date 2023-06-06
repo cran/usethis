@@ -11,40 +11,40 @@ test_that("download_url() retry logic works as advertised", {
   withr::local_options(list(usethis.quiet = FALSE))
 
   # succeed on first try
-  with_mock(
-    try_download = faux_download(0),
-    expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
+  local_mocked_bindings(
+    try_download = faux_download(0)
   )
+  expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
   expect_s3_class(out, "curl_handle")
 
   # fail, then succeed
-  with_mock(
-    try_download = faux_download(1),
-    expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
+  local_mocked_bindings(
+    try_download = faux_download(1)
   )
+  expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
   expect_s3_class(out, "curl_handle")
 
   # fail, fail, then succeed (default n_tries = 3, so should allow)
-  with_mock(
-    try_download = faux_download(2),
-    expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
+  local_mocked_bindings(
+    try_download = faux_download(2)
   )
+  expect_snapshot(out <- download_url(url = "URL", destfile = "destfile"))
   expect_s3_class(out, "curl_handle")
 
   # fail, fail, fail (exceed n_failures > n_tries = 3)
-  with_mock(
-    try_download = faux_download(5),
-    expect_snapshot(
-      out <- download_url(url = "URL", destfile = "destfile", n_tries = 3),
-      error = TRUE
-    )
+  local_mocked_bindings(
+    try_download = faux_download(5)
+  )
+  expect_snapshot(
+    out <- download_url(url = "URL", destfile = "destfile", n_tries = 3),
+    error = TRUE
   )
 
   # fail, fail, fail, succeed (make sure n_tries is adjustable)
-  with_mock(
-    try_download = faux_download(3),
-    expect_snapshot(out <- download_url(url = "URL", destfile = "destfile", n_tries = 10))
+  local_mocked_bindings(
+    try_download = faux_download(3)
   )
+  expect_snapshot(out <- download_url(url = "URL", destfile = "destfile", n_tries = 10))
   expect_s3_class(out, "curl_handle")
 })
 
@@ -61,7 +61,6 @@ test_that("tidy_download() errors early if destdir is not a directory", {
 })
 
 test_that("tidy_download() works", {
-  skip_on_cran()
   skip_if_offline("github.com")
 
   tmp <- withr::local_tempdir(pattern = "tidy-download-test-")
@@ -145,7 +144,7 @@ test_that("create_download_url() works", {
 })
 
 test_that("normalize_url() prepends https:// (or not)", {
-  expect_error(normalize_url(1), "is\\.character.*not TRUE")
+  expect_snapshot(normalize_url(1), error = TRUE)
   expect_identical(normalize_url("http://bit.ly/abc"), "http://bit.ly/abc")
   expect_identical(normalize_url("bit.ly/abc"), "https://bit.ly/abc")
   expect_identical(
@@ -180,7 +179,7 @@ test_that("github links get expanded", {
 
 test_that("conspicuous_place() returns a writeable directory", {
   skip_on_cran_macos() # even $HOME is not writeable on CRAN macOS builder
-  expect_error_free(x <- conspicuous_place())
+  expect_no_error(x <- conspicuous_place())
   expect_true(is_dir(x))
   expect_true(file_access(x, mode = "write"))
 })
@@ -188,12 +187,11 @@ test_that("conspicuous_place() returns a writeable directory", {
 test_that("conspicuous_place() uses `usethis.destdir` when set", {
   destdir <- withr::local_tempdir(pattern = "destdir_temp")
   withr::local_options(list(usethis.destdir = destdir))
-  expect_error_free(x <- conspicuous_place())
+  expect_no_error(x <- conspicuous_place())
   expect_equal(path_tidy(destdir), x)
 })
 
 test_that("use_course() errors if MIME type is not 'application/zip'", {
-  skip_on_cran()
   skip_if_offline()
 
   path <- withr::local_tempdir()

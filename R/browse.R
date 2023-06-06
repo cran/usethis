@@ -50,7 +50,6 @@
 #' browse_github_issues("fs", 1)
 #' browse_github_pulls("curl")
 #' browse_github_pulls("curl", 183)
-#' browse_travis("gert", ext = "org")
 #' browse_cran("MASS")
 #' @name browse-this
 NULL
@@ -58,7 +57,8 @@ NULL
 #' @export
 #' @rdname browse-this
 browse_package <- function(package = NULL) {
-  stopifnot(is.null(package) || is_string(package))
+  maybe_name(package)
+
   if (is.null(package)) {
     check_is_project()
   }
@@ -140,16 +140,6 @@ browse_github_actions <- function(package = NULL) {
 
 #' @export
 #' @rdname browse-this
-#' @param ext Version of travis to use.
-browse_travis <- function(package = NULL, ext = c("com", "org")) {
-  gh <- github_url(package)
-  ext <- arg_match(ext)
-  travis_url <- glue("travis-ci.{ext}")
-  view_url(sub("github.com", travis_url, gh))
-}
-
-#' @export
-#' @rdname browse-this
 browse_circleci <- function(package = NULL) {
   gh <- github_url(package)
   circle_url <- "circleci.com/gh"
@@ -167,7 +157,7 @@ browse_cran <- function(package = NULL) {
 # 2. BugReports/URL fields of DESCRIPTION (active project or arbitrary
 #    installed package)
 github_url <- function(package = NULL) {
-  stopifnot(is.null(package) || is_string(package))
+  maybe_name(package)
 
   if (is.null(package)) {
     check_is_project()

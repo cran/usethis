@@ -8,17 +8,20 @@ test_that("use_rstudio() creates .Rproj file, named after directory", {
   expect_equal(proj_line_ending(), "\n")
 })
 
+test_that("use_rstudio() can opt-out of reformatting", {
+  create_local_project(rstudio = FALSE)
+  use_rstudio(reformat = FALSE)
+  out <- readLines(rproj_path())
+  expect_true(is.na(match("AutoAppendNewline", out)))
+  expect_true(is.na(match("StripTrailingWhitespace", out)))
+  expect_true(is.na(match("LineEndingConversion", out)))
+})
+
 test_that("use_rstudio() omits package-related config for a project", {
   create_local_project(rstudio = FALSE)
   use_rstudio()
   out <- readLines(rproj_path())
   expect_true(is.na(match("BuildType: Package", out)))
-})
-
-test_that("a non-RStudio project is not recognized", {
-  create_local_package(rstudio = FALSE)
-  expect_false(is_rstudio_project())
-  expect_identical(rproj_path(), NA_character_)
 })
 
 test_that("an RStudio project is recognized", {
@@ -27,14 +30,23 @@ test_that("an RStudio project is recognized", {
   expect_match(rproj_path(), "\\.Rproj$")
 })
 
-test_that("we error for multiple Rproj files", {
-  create_local_package(rstudio = TRUE)
-  file_copy(
-    rproj_path(),
-    proj_path("copy.Rproj")
-  )
-  expect_usethis_error(rproj_path(), "Multiple .Rproj files found", fixed = TRUE)
+test_that("we error if there isn't exactly one Rproj files", {
+  dir <- withr::local_tempdir()
+  path <- dir_create(path(dir, "test"))
+
+  expect_snapshot(rproj_path(path), error = TRUE)
+
+  file_touch(path(path, "a.Rproj"))
+  file_touch(path(path, "b.Rproj"))
+  expect_snapshot(rproj_path(path), error = TRUE)
 })
+
+test_that("a non-RStudio project is not recognized", {
+  create_local_package(rstudio = FALSE)
+  expect_false(is_rstudio_project())
+  expect_error(rproj_path(), NA_character_)
+})
+
 
 test_that("Rproj is parsed (actually, only colon-containing lines)", {
   tmp <- withr::local_tempfile()
@@ -91,4 +103,15 @@ test_that("use_blank_state() modifies user-level RStudio prefs", {
   prefs <- rstudio_prefs_read()
   expect_equal(prefs[["save_workspace"]], "never")
   expect_false(prefs[["load_workspace"]])
+})
+
+test_that("use_rstudio_preferences", {
+  path <- withr::local_tempdir()
+  withr::local_envvar(c("XDG_CONFIG_HOME" = path))
+
+  use_rstudio_preferences(x = 1, y = "a")
+
+  prefs <- rstudio_prefs_read()
+  expect_equal(prefs$x, 1)
+  expect_equal(prefs$y, "a")
 })

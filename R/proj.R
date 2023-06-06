@@ -10,6 +10,7 @@ proj_set_ <- function(path) {
 
 #' Utility functions for the active project
 #'
+#' @description
 #' Most `use_*()` functions act on the **active project**. If it is
 #' unset, usethis uses [rprojroot](https://rprojroot.r-lib.org) to
 #' find the project root of the current working directory. It establishes the
@@ -25,6 +26,10 @@ proj_set_ <- function(path) {
 #' [rprojroot](https://rprojroot.r-lib.org) or its simpler companion,
 #' [here](https://here.r-lib.org), to programmatically detect a project and
 #' build paths within it.
+#'
+#' If you are puzzled why a path (usually the current working directory) does
+#' *not* appear to be inside project, it can be helpful to call
+#' `here::dr_here()` to get much more verbose feedback.
 #'
 #' @name proj_utils
 #' @family project functions
@@ -69,7 +74,7 @@ proj_get <- function() {
 #'   adding a `DESCRIPTION` file.
 #' @export
 proj_set <- function(path = ".", force = FALSE) {
-  if (dir_exists(path %||% "") && is_in_proj(path)) {
+  if (!force && dir_exists(path %||% "") && is_in_proj(path)) {
     return(invisible(proj_get_()))
   }
 
@@ -83,18 +88,24 @@ proj_set <- function(path = ".", force = FALSE) {
   check_path_is_directory(path)
   new_project <- proj_find(path)
   if (is.null(new_project)) {
-    ui_stop(
-      "Path {ui_path(path)} does not appear to be inside a project or package."
-    )
+    ui_stop('
+      Path {ui_path(path)} does not appear to be inside a project or package.
+      Read more in the help for {ui_code("proj_get()")}.')
   }
   proj_set(path = new_project, force = TRUE)
 }
 
-#' @describeIn proj_utils Builds a path within the active project returned by
+#' @describeIn proj_utils Builds paths within the active project returned by
 #'   `proj_get()`. Thin wrapper around [fs::path()].
 #' @inheritParams fs::path
 #' @export
 proj_path <- function(..., ext = "") {
+  has_absolute_path <- function(x) any(is_absolute_path(x))
+  dots <- list(...)
+  if (any(map_lgl(dots, has_absolute_path))) {
+    ui_stop("Paths must be relative to the active project")
+  }
+
   path_norm(path(proj_get(), ..., ext = ext))
 }
 
@@ -212,9 +223,9 @@ check_is_package <- function(whos_asking = NULL) {
 
 check_is_project <- function() {
   if (!possibly_in_proj()) {
-    ui_stop("
-      We do not appear to be inside a valid project or package
-      Read more in the help for {ui_code(\"proj_get()\")}")
+    ui_stop('
+      We do not appear to be inside a valid project or package.
+      Read more in the help for {ui_code("proj_get()")}.')
   }
 }
 
@@ -231,11 +242,6 @@ is_in_proj <- function(path) {
   )
 }
 
-package_data <- function(base_path = proj_get()) {
-  desc <- desc::description$new(base_path)
-  as.list(desc$get(desc$fields()))
-}
-
 project_name <- function(base_path = proj_get()) {
   ## escape hatch necessary to solve this chicken-egg problem:
   ## create_package() calls use_description(), which calls project_name()
@@ -246,7 +252,7 @@ project_name <- function(base_path = proj_get()) {
   }
 
   if (is_package(base_path)) {
-    package_data(base_path)$Package
+    proj_desc(base_path)$get_field("Package")
   } else {
     path_file(base_path)
   }

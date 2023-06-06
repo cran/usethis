@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# usethis <img src="man/figures/logo.png" align="right" height="139" />
+# usethis <a href="https://usethis.r-lib.org"><img src="man/figures/logo.png" align="right" height="138" alt="usethis website" /></a>
 
 <!-- badges: start -->
 
@@ -12,6 +12,7 @@ coverage](https://codecov.io/gh/r-lib/usethis/branch/main/graph/badge.svg)](http
 status](https://www.r-pkg.org/badges/version/usethis)](https://CRAN.R-project.org/package=usethis)
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![.github/workflows/R-CMD-check](https://github.com/r-lib/usethis/actions/workflows/.github/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/r-lib/usethis/actions/workflows/.github/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 usethis is a workflow package: it automates repetitive tasks that arise
@@ -29,8 +30,8 @@ install.packages("usethis")
 Or install the development version from GitHub with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("r-lib/usethis")
+# install.packages("pak")
+pak::pak("r-lib/usethis")
 ```
 
 ## Usage
@@ -60,8 +61,8 @@ library(usethis)
 # Create a new package -------------------------------------------------
 path <- file.path(tempdir(), "mypkg")
 create_package(path)
-#> ✔ Creating '/tmp/Rtmp4VMzwK/mypkg/'
-#> ✔ Setting active project to '/private/tmp/Rtmp4VMzwK/mypkg'
+#> ✔ Creating '/tmp/RtmpPqIkgo/mypkg/'
+#> ✔ Setting active project to '/private/tmp/RtmpPqIkgo/mypkg'
 #> ✔ Creating 'R/'
 #> ✔ Writing 'DESCRIPTION'
 #> Package: mypkg
@@ -74,17 +75,17 @@ create_package(path)
 #>     license
 #> Encoding: UTF-8
 #> Roxygen: list(markdown = TRUE)
-#> RoxygenNote: 7.2.0
+#> RoxygenNote: 7.2.3
 #> ✔ Writing 'NAMESPACE'
 #> ✔ Setting active project to '<no active project>'
 # only needed since this session isn't interactive
 proj_activate(path)
-#> ✔ Setting active project to '/private/tmp/Rtmp4VMzwK/mypkg'
-#> ✔ Changing working directory to '/tmp/Rtmp4VMzwK/mypkg/'
+#> ✔ Setting active project to '/private/tmp/RtmpPqIkgo/mypkg'
+#> ✔ Changing working directory to '/tmp/RtmpPqIkgo/mypkg/'
 
 # Modify the description ----------------------------------------------
 use_mit_license("My Name")
-#> ✔ Setting License field in DESCRIPTION to 'MIT + file LICENSE'
+#> ✔ Adding 'MIT + file LICENSE' to License
 #> ✔ Writing 'LICENSE'
 #> ✔ Writing 'LICENSE.md'
 #> ✔ Adding '^LICENSE\\.md$' to '.Rbuildignore'
@@ -104,7 +105,7 @@ use_news_md()
 
 use_test("my-test")
 #> ✔ Adding 'testthat' to Suggests field in DESCRIPTION
-#> ✔ Setting Config/testthat/edition field in DESCRIPTION to '3'
+#> ✔ Adding '3' to Config/testthat/edition
 #> ✔ Creating 'tests/testthat/'
 #> ✔ Writing 'tests/testthat.R'
 #> ✔ Writing 'tests/testthat/test-my-test.R'
@@ -122,7 +123,7 @@ use_data(x, y)
 # Use git ------------------------------------------------------------
 use_git()
 #> ✔ Initialising Git repo
-#> ✔ Adding '.Rproj.user', '.Rhistory', '.Rdata', '.httr-oauth', '.DS_Store' to '.gitignore'
+#> ✔ Adding '.Rproj.user', '.Rhistory', '.Rdata', '.httr-oauth', '.DS_Store', '.quarto' to '.gitignore'
 ```
 
 ## Code of Conduct

@@ -27,11 +27,9 @@ of typos in live settings, these shorter forms are accepted:
   and Google Drive.
 }\if{html}{\out{</div>}}}
 
-\item{destdir}{The new folder is stored here. If \code{NULL}, defaults to user's
-Desktop or some other conspicuous place. You can also set a default
-location using the option \code{usethis.destdir}, e.g.
-\code{options(usethis.destdir = "a/good/dir")}, perhaps saved to your
-\code{.Rprofile} with \code{\link[=edit_r_profile]{edit_r_profile()}}}
+\item{destdir}{Destination for the new folder. Defaults to the location
+stored in the global option \code{usethis.destdir}, if defined, or to the user's
+Desktop or similarly conspicuous place otherwise.}
 
 \item{cleanup}{Whether to delete the original ZIP file after unpacking its
 contents. In an interactive setting, \code{NA} leads to a menu where user can
@@ -49,7 +47,7 @@ actually be able to find them. The underlying helpers are documented in
 }
 \section{Functions}{
 \itemize{
-\item \code{use_course}: Designed with live workshops in mind. Includes intentional friction to
+\item \code{use_course()}: Designed with live workshops in mind. Includes intentional friction to
 highlight the download destination. Workflow:
 \itemize{
 \item User executes, e.g., \code{use_course("bit.ly/xxx-yyy-zzz")}.
@@ -61,10 +59,10 @@ launched. Otherwise, the folder is opened in the file manager, e.g. Finder
 or File Explorer.
 }
 
-\item \code{use_zip}: More useful in day-to-day work. Downloads in current working directory, by
+\item \code{use_zip()}: More useful in day-to-day work. Downloads in current working directory, by
 default, and allows \code{cleanup} behaviour to be specified.
-}}
 
+}}
 \examples{
 \dontrun{
 # download the source of usethis from GitHub, behind a bit.ly shortlink

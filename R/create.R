@@ -15,14 +15,14 @@
 #' @param roxygen Do you plan to use roxygen2 to document your package?
 #' @param rstudio If `TRUE`, calls [use_rstudio()] to make the new package or
 #'   project into an [RStudio
-#'   Project](https://support.rstudio.com/hc/en-us/articles/200526207-Using-Projects).
+#'   Project](https://r-pkgs.org/workflow101.html#sec-workflow101-rstudio-projects).
 #'    If `FALSE` and a non-package project, a sentinel `.here` file is placed so
 #'   that the directory can be recognized as a project by the
 #'   [here](https://here.r-lib.org) or
 #'   [rprojroot](https://rprojroot.r-lib.org) packages.
 #' @param open If `TRUE`, [activates][proj_activate()] the new project:
 #'
-#'   * If RStudio desktop, the package is opened in a new session.
+#'   * If using RStudio desktop, the package is opened in a new session.
 #'   * If on RStudio server, the current RStudio project is activated.
 #'   * Otherwise, the working directory and active project is changed.
 #'
@@ -51,7 +51,7 @@ create_package <- function(path,
   local_project(path, force = TRUE)
 
   use_directory("R")
-  use_description(fields, check_name = FALSE, roxygen = roxygen)
+  proj_desc_create(name, fields, roxygen)
   use_namespace(roxygen = roxygen)
 
   if (rstudio) {
@@ -106,12 +106,13 @@ create_project <- function(path,
 
 #' Create a project from a GitHub repo
 #'
-#' @description Creates a new local project and Git repository from a repo on
-#' GitHub, by either cloning or
+#' @description
+#' Creates a new local project and Git repository from a repo on GitHub, by
+#' either cloning or
 #' [fork-and-cloning](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
 #' In the fork-and-clone case, `create_from_github()` also does additional
 #' remote and branch setup, leaving you in the perfect position to make a pull
-#' request with [pr_init()], one of several [functions that work pull
+#' request with [pr_init()], one of several [functions for working with pull
 #' requests][pull-requests].
 #'
 #' `create_from_github()` works best when your GitHub credentials are
@@ -132,13 +133,12 @@ create_project <- function(path,
 #'   * Browser URL, such as `"https://github.com/OWNER/REPO"`
 #'   * HTTPS Git URL, such as `"https://github.com/OWNER/REPO.git"`
 #'   * SSH Git URL, such as `"git@github.com:OWNER/REPO.git"`
-#'
-#'   In the case of a browser, HTTPS, or SSH URL, the `host` is extracted from
-#'   the URL. The `REPO` part will be the name of the new local folder, which is
-#'   also a project and Git repo.
-#' @inheritParams use_course
+#' @param destdir Destination for the new folder, which will be named according
+#'   to the `REPO` extracted from `repo_spec`. Defaults to the location stored
+#'   in the global option `usethis.destdir`, if defined, or to the user's
+#'   Desktop or similarly conspicuous place otherwise.
 #' @param fork If `FALSE`, we clone `repo_spec`. If `TRUE`, we fork
-#'   `repo_spec`, clone that fork, and do additional set up favorable for
+#'   `repo_spec`, clone that fork, and do additional setup favorable for
 #'   future pull requests:
 #'   * The source repo, `repo_spec`, is configured as the `upstream` remote,
 #'   using the indicated `protocol`.
@@ -148,8 +148,18 @@ create_project <- function(path,
 #'
 #'   If `fork = NA` (the default), we check your permissions on `repo_spec`. If
 #'   you can push, we set `fork = FALSE`, If you cannot, we set `fork = TRUE`.
+#' @param host GitHub host to target, passed to the `.api_url` argument of
+#'   [gh::gh()]. If `repo_spec` is a URL, `host` is extracted from that.
+#'
+#'   If unspecified, gh defaults to "https://api.github.com", although gh's
+#'   default can be customised by setting the GITHUB_API_URL environment
+#'   variable.
+#'
+#'   For a hypothetical GitHub Enterprise instance, either
+#'   "https://github.acme.com/api/v3" or "https://github.acme.com" is
+#'   acceptable.
 #' @param rstudio Initiate an [RStudio
-#'   Project](https://support.rstudio.com/hc/en-us/articles/200526207-Using-Projects)?
+#'   Project](https://r-pkgs.org/workflow101.html#sec-workflow101-rstudio-projects)?
 #'   Defaults to `TRUE` if in an RStudio session and project has no
 #'   pre-existing `.Rproj` file. Defaults to `FALSE` otherwise (but note that
 #'   the cloned repo may already be an RStudio Project, i.e. may already have a
@@ -226,10 +236,11 @@ create_from_github <- function(repo_spec,
   gh <- gh_tr(list(repo_owner = source_owner, repo_name = repo_name, api_url = host))
 
   repo_info <- gh("GET /repos/{owner}/{repo}")
-  # 2020-10-14 GitHub has had some bugs lately around default branch
-  # today, the POST payload, if I create a fork, mis-reports the default branch
-  # it reports 'main', even though actual default branch is 'master'
-  # therefore, we're consulting the source repo for this info
+  # 2023-01-28 We're seeing the GitHub bug again around default branch in a
+  # fresh fork. If I create a fork, the POST payload *sometimes* mis-reports the
+  # default branch. I.e. it reports `main`, even though the actual default
+  # branch is `master`. Therefore we're reverting to consulting the source repo
+  # for this info
   default_branch <- repo_info$default_branch
 
   if (is.na(fork)) {
@@ -261,6 +272,8 @@ create_from_github <- function(repo_spec,
       ssh = repo_info$ssh_url
     )
     repo_info <- gh("POST /repos/{owner}/{repo}/forks")
+    ui_done("Waiting for the fork to finalize before cloning")
+    Sys.sleep(3)
   }
 
   origin_url <- switch(
@@ -271,11 +284,13 @@ create_from_github <- function(repo_spec,
 
   ui_done("Cloning repo from {ui_value(origin_url)} into {ui_value(repo_path)}")
   gert::git_clone(origin_url, repo_path, verbose = FALSE)
-  local_project(repo_path, force = TRUE) # schedule restoration of project
 
-  # 2020-10-14 due to a GitHub bug, we are consulting the source repo for this
-  # previously (and more naturally) we consulted the fork itself
-  # default_branch <- repo_info$default_branch
+  proj_path <- find_rstudio_root(repo_path)
+  local_project(proj_path, force = TRUE) # schedule restoration of project
+
+  # 2023-01-28 again, it would be more natural to trust the default branch of
+  # the fork, but that cannot always be trusted. For now, we're still using
+  # the default branch learned from the source repo.
   ui_info("Default branch is {ui_value(default_branch)}")
 
   if (fork) {
@@ -292,9 +307,9 @@ create_from_github <- function(repo_spec,
   }
 
   rstudio <- rstudio %||% rstudio_available()
-  rstudio <- rstudio && !is_rstudio_project(proj_get())
+  rstudio <- rstudio && !is_rstudio_project()
   if (rstudio) {
-    use_rstudio()
+    use_rstudio(reformat = FALSE)
   }
 
   if (open) {
@@ -307,17 +322,26 @@ create_from_github <- function(repo_spec,
   invisible(proj_get())
 }
 
-# creates a backdoor we can exploit in tests
-allow_nested_project <- function() FALSE
+# If there's a single directory containing an .Rproj file, use it.
+# Otherwise work in the repo root
+find_rstudio_root <- function(path) {
+  rproj <- rproj_paths(path, recurse = TRUE)
+  if (length(rproj) == 1) {
+    path_dir(rproj)
+  } else {
+    path
+  }
+}
 
 challenge_nested_project <- function(path, name) {
   if (!possibly_in_proj(path)) {
     return(invisible())
   }
 
-  # we mock this in a few tests, to allow a nested project
-  if (allow_nested_project()) {
-    return()
+  # creates an undocumented backdoor we can exploit when the interactive
+  # approval is impractical, e.g. in tests
+  if (isTRUE(getOption("usethis.allow_nested_project", FALSE))) {
+    return(invisible())
   }
 
   ui_line(

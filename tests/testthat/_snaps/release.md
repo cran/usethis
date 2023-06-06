@@ -5,22 +5,22 @@
     Output
       First release:
       
+      * [ ] `usethis::use_news_md()`
       * [ ] `usethis::use_cran_comments()`
       * [ ] Update (aspirational) install instructions in README
       * [ ] Proofread `Title:` and `Description:`
       * [ ] Check that all exported functions have `@return` and `@examples`
       * [ ] Check that `Authors@R:` includes a copyright holder (role 'cph')
-      * [ ] Check [licensing of included files](https://r-pkgs.org/license.html#code-you-bundle)
+      * [ ] Check [licensing of included files](https://r-pkgs.org/license.html#sec-code-you-bundle)
       * [ ] Review <https://github.com/DavisVaughan/extrachecks>
       
       Prepare for release:
       
       * [ ] `git pull`
-      * [ ] Check if any deprecation processes should be advanced, as described in [Gradual deprecation](https://lifecycle.r-lib.org/articles/communicate.html#gradual-deprecation)
+      * [ ] `usethis::use_github_links()`
       * [ ] `urlchecker::url_check()`
       * [ ] `devtools::check(remote = TRUE, manual = TRUE)`
       * [ ] `devtools::check_win_devel()`
-      * [ ] `rhub::check_for_cran()`
       * [ ] `git push`
       * [ ] Draft blog post
       
@@ -33,14 +33,12 @@
       Wait for CRAN...
       
       * [ ] Accepted :tada:
-      * [ ] `git push`
+      * [ ] Add preemptive link to blog post in pkgdown news menu
       * [ ] `usethis::use_github_release()`
-      * [ ] `usethis::use_dev_version()`
+      * [ ] `usethis::use_dev_version(push = TRUE)`
       * [ ] `usethis::use_news_md()`
-      * [ ] `git push`
       * [ ] Finish blog post
       * [ ] Tweet
-      * [ ] Add link to blog post in pkgdown news menu
 
 ---
 
@@ -51,11 +49,12 @@
       
       * [ ] `git pull`
       * [ ] Check [current CRAN check results](https://cran.rstudio.org/web/checks/check_results_{TESTPKG}.html)
+      * [ ] `usethis::use_news_md()`
       * [ ] [Polish NEWS](https://style.tidyverse.org/news.html#news-release)
+      * [ ] `usethis::use_github_links()`
       * [ ] `urlchecker::url_check()`
       * [ ] `devtools::check(remote = TRUE, manual = TRUE)`
       * [ ] `devtools::check_win_devel()`
-      * [ ] `rhub::check_for_cran()`
       * [ ] `revdepcheck::revdep_check(num_workers = 4)`
       * [ ] Update `cran-comments.md`
       * [ ] `git push`
@@ -69,11 +68,9 @@
       Wait for CRAN...
       
       * [ ] Accepted :tada:
-      * [ ] `git push`
       * [ ] `usethis::use_github_release()`
-      * [ ] `usethis::use_dev_version()`
+      * [ ] `usethis::use_dev_version(push = TRUE)`
       * [ ] `usethis::use_news_md()`
-      * [ ] `git push`
 
 ---
 
@@ -84,12 +81,12 @@
       
       * [ ] `git pull`
       * [ ] Check [current CRAN check results](https://cran.rstudio.org/web/checks/check_results_{TESTPKG}.html)
-      * [ ] Check if any deprecation processes should be advanced, as described in [Gradual deprecation](https://lifecycle.r-lib.org/articles/communicate.html#gradual-deprecation)
+      * [ ] `usethis::use_news_md()`
       * [ ] [Polish NEWS](https://style.tidyverse.org/news.html#news-release)
+      * [ ] `usethis::use_github_links()`
       * [ ] `urlchecker::url_check()`
       * [ ] `devtools::check(remote = TRUE, manual = TRUE)`
       * [ ] `devtools::check_win_devel()`
-      * [ ] `rhub::check_for_cran()`
       * [ ] `revdepcheck::revdep_check(num_workers = 4)`
       * [ ] Update `cran-comments.md`
       * [ ] `git push`
@@ -104,14 +101,31 @@
       Wait for CRAN...
       
       * [ ] Accepted :tada:
-      * [ ] `git push`
+      * [ ] Add preemptive link to blog post in pkgdown news menu
       * [ ] `usethis::use_github_release()`
-      * [ ] `usethis::use_dev_version()`
+      * [ ] `usethis::use_dev_version(push = TRUE)`
       * [ ] `usethis::use_news_md()`
-      * [ ] `git push`
       * [ ] Finish blog post
       * [ ] Tweet
-      * [ ] Add link to blog post in pkgdown news menu
+
+# construct correct revdep bullet
+
+    Code
+      release_revdepcheck(on_cran = FALSE)
+    Output
+      NULL
+    Code
+      release_revdepcheck(on_cran = TRUE, is_posit_pkg = FALSE)
+    Output
+      [1] "* [ ] `revdepcheck::revdep_check(num_workers = 4)`"
+    Code
+      release_revdepcheck(on_cran = TRUE, is_posit_pkg = TRUE)
+    Output
+      [1] "* [ ] `revdepcheck::cloud_check()`"
+    Code
+      release_revdepcheck(on_cran = TRUE, is_posit_pkg = TRUE, env = env)
+    Output
+      [1] "* [ ] `revdepcheck::cloud_check(extra_revdeps = c(\"waldo\", \"testthat\"))`"
 
 # RStudio-ness detection works
 
@@ -122,12 +136,13 @@
       
       * [ ] `git pull`
       * [ ] Check [current CRAN check results](https://cran.rstudio.org/web/checks/check_results_{TESTPKG}.html)
-      * [ ] Check if any deprecation processes should be advanced, as described in [Gradual deprecation](https://lifecycle.r-lib.org/articles/communicate.html#gradual-deprecation)
+      * [ ] Bump required R version in DESCRIPTION to 3.6
+      * [ ] `usethis::use_news_md()`
       * [ ] [Polish NEWS](https://style.tidyverse.org/news.html#news-release)
+      * [ ] `usethis::use_github_links()`
       * [ ] `urlchecker::url_check()`
       * [ ] `devtools::check(remote = TRUE, manual = TRUE)`
       * [ ] `devtools::check_win_devel()`
-      * [ ] `rhub::check_for_cran()`
       * [ ] `revdepcheck::cloud_check()`
       * [ ] Update `cran-comments.md`
       * [ ] `git push`
@@ -143,12 +158,10 @@
       Wait for CRAN...
       
       * [ ] Accepted :tada:
-      * [ ] `git push`
+      * [ ] Add preemptive link to blog post in pkgdown news menu
       * [ ] `usethis::use_github_release()`
-      * [ ] `usethis::use_dev_version()`
+      * [ ] `usethis::use_dev_version(push = TRUE)`
       * [ ] `usethis::use_news_md()`
-      * [ ] `git push`
       * [ ] Finish blog post
       * [ ] Tweet
-      * [ ] Add link to blog post in pkgdown news menu
 

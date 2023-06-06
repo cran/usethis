@@ -40,15 +40,8 @@ dots <- function(...) {
 }
 
 asciify <- function(x) {
-  stopifnot(is.character(x))
+  check_character(x)
   gsub("[^a-zA-Z0-9_-]+", "-", x)
-}
-
-slug <- function(x, ext) {
-  x_base <- path_ext_remove(x)
-  x_ext <- path_ext(x)
-  ext <- if (identical(tolower(x_ext), tolower(ext))) x_ext else ext
-  as.character(path_ext_set(x_base, ext))
 }
 
 compact <- function(x) {
@@ -59,9 +52,6 @@ compact <- function(x) {
 # Needed for mocking
 is_installed <- function(pkg) {
   rlang::is_installed(pkg)
-}
-check_installed <- function(pkg) {
-  rlang::check_installed(pkg)
 }
 
 isFALSE <- function(x) {
@@ -92,32 +82,30 @@ is_online <- function(host) {
 year <- function() format(Sys.Date(), "%Y")
 
 pluck_lgl <- function(.x, ...) {
-  as_logical(purrr::pluck(.x, ..., .default = NA))
+  as.logical(purrr::pluck(.x, ..., .default = NA))
 }
 
 pluck_chr <- function(.x, ...) {
-  as_character(purrr::pluck(.x, ..., .default = NA))
+  as.character(purrr::pluck(.x, ..., .default = NA))
 }
 
 pluck_int <- function(.x, ...) {
-  as_integer(purrr::pluck(.x, ..., .default = NA))
+  as.integer(purrr::pluck(.x, ..., .default = NA))
 }
 
 is_windows <- function() {
   .Platform$OS.type == "windows"
 }
 
-check_string <- function(x, nm = deparse(substitute(x))) {
-  if (!is_string(x)) {
-    ui_stop("{ui_code(nm)} must be a string.")
-  }
-  x
+# For stability of `stringsAsFactors` across versions
+data.frame <- function(..., stringsAsFactors = FALSE) {
+  base::data.frame(..., stringsAsFactors = stringsAsFactors)
 }
 
-maybe_string <- function(x, nm = deparse(substitute(x))) {
-  if (is.null(x)) {
-    x
-  } else {
-    check_string(x, nm = nm)
-  }
+# wrapper around check_name() from import-standalone-types-check.R
+# for the common case when NULL is allowed (often default)
+maybe_name <- function(x, ..., arg = caller_arg(x),
+                       call = caller_env()) {
+  check_name(x, ..., allow_null = TRUE,
+             arg = arg, call = call)
 }

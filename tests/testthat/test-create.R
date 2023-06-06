@@ -37,24 +37,31 @@ test_that("nested project is disallowed, by default", {
 
 test_that("nested package can be created if user really, really wants to", {
   parent <- create_local_package()
-  with_mock(
-    # since user can't approve interactively, use the backdoor
-    allow_nested_project = function() TRUE,
-    child <- create_package(path(parent, "fghijk"))
-  )
-  expect_true(possibly_in_proj(child))
-  expect_true(is_package(child))
+  child_path <- path(parent, "fghijk")
+
+  # since user can't approve interactively, use the backdoor
+  withr::local_options("usethis.allow_nested_project" = TRUE)
+
+  child_result <- create_package(child_path)
+
+  expect_equal(child_path, child_result)
+  expect_true(possibly_in_proj(child_path))
+  expect_true(is_package(child_path))
+  expect_equal(project_name(child_path), "fghijk")
 })
 
 test_that("nested project can be created if user really, really wants to", {
   parent <- create_local_project()
-  with_mock(
-    # since user can't approve interactively, use the backdoor
-    allow_nested_project = function() TRUE,
-    child <- create_project(path(parent, "fghijk"))
-  )
-  expect_true(possibly_in_proj(child))
-  expect_false(is_package(child))
+  child_path <- path(parent, "fghijk")
+
+  # since user can't approve interactively, use the backdoor
+  withr::local_options("usethis.allow_nested_project" = TRUE)
+
+  child_result <- create_project(child_path)
+
+  expect_equal(child_path, child_result)
+  expect_true(possibly_in_proj(child_path))
+  expect_equal(project_name(child_path), "fghijk")
 })
 
 test_that("can create package in current directory (literally in '.')", {
@@ -64,7 +71,7 @@ test_that("can create package in current directory (literally in '.')", {
   orig_proj <- proj_get_()
   orig_wd <- path_wd()
 
-  expect_error_free(
+  expect_no_error(
     out_path <- create_package(".", open = FALSE)
   )
   expect_equal(path_wd(), orig_wd)
@@ -81,7 +88,7 @@ test_that("create_* works w/ non-existing rel path, open = FALSE case", {
   withr::local_dir(sandbox)
 
   rel_path_pkg <- path_file(file_temp(pattern = "abc"))
-  expect_error_free(
+  expect_no_error(
     out_path <- create_package(rel_path_pkg, open = FALSE)
   )
   expect_true(dir_exists(rel_path_pkg))
@@ -90,7 +97,7 @@ test_that("create_* works w/ non-existing rel path, open = FALSE case", {
   expect_equal(path_wd(), sandbox)
 
   rel_path_proj <- path_file(file_temp(pattern = "def"))
-  expect_error_free(
+  expect_no_error(
     out_path <- create_project(rel_path_proj, open = FALSE)
   )
   expect_true(dir_exists(rel_path_proj))
@@ -106,15 +113,12 @@ test_that("create_*() works w/ non-existing rel path, open = TRUE, not in RStudi
   withr::defer(dir_delete(sandbox))
   withr::defer(proj_set(orig_proj, force = TRUE))
   withr::local_dir(sandbox)
+  local_rstudio_available(FALSE)
 
   # package
   rel_path_pkg <- path_file(file_temp(pattern = "ghi"))
-  with_mock(
-    # make sure we act as if not in RStudio
-    rstudio_available = function(...) FALSE,
-    expect_error_free(
-      out_path <- create_package(rel_path_pkg, open = TRUE)
-    )
+  expect_no_error(
+    out_path <- create_package(rel_path_pkg, open = TRUE)
   )
   exp_path_pkg <- path(sandbox, rel_path_pkg)
   expect_equal(out_path, exp_path_pkg)
@@ -125,12 +129,8 @@ test_that("create_*() works w/ non-existing rel path, open = TRUE, not in RStudi
 
   # project
   rel_path_proj <- path_file(file_temp(pattern = "jkl"))
-  with_mock(
-    # make sure we act as if not in RStudio
-    rstudio_available = function(...) FALSE,
-    expect_error_free(
-      out_path <- create_project(rel_path_proj, open = TRUE)
-    )
+  expect_no_error(
+    out_path <- create_project(rel_path_proj, open = TRUE)
   )
   exp_path_proj <- path(sandbox, rel_path_proj)
   expect_equal(out_path, exp_path_proj)

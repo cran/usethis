@@ -11,8 +11,16 @@
 #'   * Adds RStudio files to `.Rbuildignore`, if project is a package
 #'
 #' @param line_ending Line ending
+#' @param reformat If `TRUE`, the `.Rproj` is setup with common options that
+#'   reformat files on save: adding a trailing newline, trimming trailing
+#'   whitespace, and setting the line-ending. This is best practice for
+#'   new projects.
+#'
+#'   If `FALSE`, these options are left unset, which is more appropriate when
+#'   you're contributing to someone else's project that does not have its own
+#'   `.Rproj` file.
 #' @export
-use_rstudio <- function(line_ending = c("posix", "windows")) {
+use_rstudio <- function(line_ending = c("posix", "windows"), reformat = TRUE) {
   line_ending <- arg_match(line_ending)
   line_ending <- c("posix" = "Posix", "windows" = "Windows")[[line_ending]]
 
@@ -20,7 +28,11 @@ use_rstudio <- function(line_ending = c("posix", "windows")) {
   new <- use_template(
     "template.Rproj",
     save_as = rproj_file,
-    data = list(line_ending = line_ending, is_pkg = is_package()),
+    data = list(
+      line_ending = line_ending,
+      is_pkg = is_package(),
+      reformat = reformat
+    ),
     ignore = is_package()
   )
 
@@ -49,42 +61,49 @@ use_blank_slate <- function(scope = c("user", "project")) {
   scope <- match.arg(scope)
 
   if (scope == "user") {
-    use_rstudio_config(list(
+    use_rstudio_preferences(
       save_workspace = "never",
       load_workspace = FALSE
-    ))
-    return(invisible())
+    )
+  } else {
+    rproj_fields <- modify_rproj(
+      rproj_path(),
+      list(RestoreWorkspace = "No", SaveWorkspace = "No")
+    )
+    write_utf8(rproj_path(), serialize_rproj(rproj_fields))
+    restart_rstudio("Restart RStudio with a blank slate?")
   }
-
-  if (!is_rstudio_project()) {
-    ui_stop("{ui_value(project_name())} is not an RStudio Project.")
-  }
-
-  rproj_fields <- modify_rproj(
-    rproj_path(),
-    list(RestoreWorkspace = "No", SaveWorkspace = "No")
-  )
-  write_utf8(rproj_path(), serialize_rproj(rproj_fields))
-  restart_rstudio("Restart RStudio with a blank slate?")
 
   invisible()
 }
 
 # Is base_path an RStudio Project or inside an RStudio Project?
 is_rstudio_project <- function(base_path = proj_get()) {
-  res <- tryCatch(
-    rprojroot::find_rstudio_root_file(path = base_path),
-    error = function(e) NA
-  )
-  !is.na(res)
+  length(rproj_paths(base_path)) == 1
 }
 
-rproj_path <- function(base_path = proj_get()) {
-  rproj_path <- dir_ls(base_path, regexp = "[.]Rproj$")
-  if (length(rproj_path) > 1) {
-    ui_stop("Multiple .Rproj files found.")
+rproj_paths <- function(base_path, recurse = FALSE) {
+  dir_ls(base_path, regexp = "[.]Rproj$", recurse = recurse)
+}
+
+# Return path to single .Rproj or die trying
+rproj_path <- function(base_path = proj_get(), call = caller_env()) {
+  rproj <- rproj_paths(base_path)
+  if (length(rproj) == 1) {
+    rproj
+  } else if (length(rproj) == 0) {
+    name <- project_name(base_path)
+    cli::cli_abort("{.val {name}} is not an RStudio Project.", call = call)
+  } else {
+    name <- project_name(base_path)
+    cli::cli_abort(
+      c(
+        "{.val {name}} must contain a single .Rproj file.",
+        i = "Found {.file {path_rel(rproj, base_path)}}."
+      ),
+      call = call
+    )
   }
-  if (length(rproj_path) == 1) rproj_path else NA_character_
 }
 
 # Is base_path open in RStudio?
@@ -180,6 +199,40 @@ rstudio_config_path <- function(...) {
   path(base, ...)
 }
 
+#' Set global RStudio preferences
+#'
+#' This function allows you to set global RStudio preferences, achieving the
+#' same effect programmatically as clicking buttons in RStudio's Global Options.
+#' You can find a list of configurable properties at
+#' <https://docs.posit.co/ide/server-pro/reference/session_user_settings.html>.
+#'
+#' @export
+#' @param ... <[`dynamic-dots`][rlang::dyn-dots]> Property-value pairs.
+#' @return A named list of the previous values, invisibly.
+use_rstudio_preferences <- function(...) {
+  new <- dots_list(..., .homonyms = "last")
+  if (length(new) > 0 && !is_named(new)) {
+    cli::cli_abort("All arguments in {.arg ...} must be named.")
+  }
+
+  json <- rstudio_prefs_read()
+  old <- json[names(new)]
+
+  for (name in names(new)) {
+    val <- new[[name]]
+
+    if (identical(json[[name]], val)) {
+      next
+    }
+
+    ui_done("Setting RStudio preference {ui_field(name)} to {ui_value(val)}.")
+    json[[name]] <- val
+  }
+
+  rstudio_prefs_write(json)
+  invisible(old)
+}
+
 rstudio_prefs_read <- function() {
   path <- rstudio_config_path("rstudio-prefs.json")
   if (file_exists(path)) {
@@ -193,22 +246,4 @@ rstudio_prefs_write <- function(json) {
   path <- rstudio_config_path("rstudio-prefs.json")
   create_directory(path_dir(path))
   jsonlite::write_json(json, path, auto_unbox = TRUE, pretty = TRUE)
-}
-
-use_rstudio_config <- function(values) {
-  stopifnot(is.list(values), is_named(values))
-  json <- rstudio_prefs_read()
-
-  for (name in names(values)) {
-    val <- values[[name]]
-
-    if (identical(json[[name]], val)) {
-      next
-    }
-
-    ui_done("Setting RStudio preference {ui_field(name)} to {ui_value(val)}")
-    json[[name]] <- val
-  }
-
-  rstudio_prefs_write(json)
 }

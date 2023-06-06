@@ -2,6 +2,7 @@
 # release bullets ---------------------------------------------------------
 
 test_that("release bullets don't change accidentally", {
+  withr::local_options(usethis.description = NULL)
   create_local_package()
 
   # First release
@@ -23,30 +24,60 @@ test_that("release bullets don't change accidentally", {
   )
 })
 
+test_that("non-patch + lifecycle = advanced deprecation process", {
+  withr::local_options(usethis.description = NULL)
+  create_local_package()
+  use_package("lifecycle")
+
+  has_deprecation <- function(x) any(grepl("deprecation processes", x))
+  expect_true(has_deprecation(release_checklist("1.0.0", on_cran = TRUE)))
+  expect_true(has_deprecation(release_checklist("1.1.0", on_cran = TRUE)))
+  expect_false(has_deprecation(release_checklist("1.1.1", on_cran = TRUE)))
+})
+
 test_that("get extra news bullets if available", {
   env <- env(release_bullets = function() "Extra bullets")
-  expect_equal(release_extra(env), "* [ ] Extra bullets")
+  expect_equal(release_extra_bullets(env), "* [ ] Extra bullets")
 
   env <- env(release_questions = function() "Extra bullets")
-  expect_equal(release_extra(env), "* [ ] Extra bullets")
+  expect_equal(release_extra_bullets(env), "* [ ] Extra bullets")
 
   env <- env()
-  expect_equal(release_extra(env), character())
+  expect_equal(release_extra_bullets(env), character())
+})
+
+test_that("construct correct revdep bullet", {
+  create_local_package()
+  env <- env(release_extra_revdeps = function() c("waldo", "testthat"))
+
+  expect_snapshot({
+    release_revdepcheck(on_cran = FALSE)
+    release_revdepcheck(on_cran = TRUE, is_posit_pkg = FALSE)
+    release_revdepcheck(on_cran = TRUE, is_posit_pkg = TRUE)
+    release_revdepcheck(on_cran = TRUE, is_posit_pkg = TRUE, env = env)
+  })
 })
 
 test_that("RStudio-ness detection works", {
+  withr::local_options(usethis.description = NULL)
   create_local_package()
+  local_mocked_bindings(
+    tidy_minimum_r_version = function() numeric_version("3.6")
+  )
 
-  expect_false(is_rstudio_pkg())
+  expect_false(is_posit_pkg())
 
-  desc <- desc::desc(file = proj_get())
-  desc$add_author(given = "RstuDio, PbC", role = "fnd")
+  desc <- proj_desc()
+  desc$add_author(given = "PoSiT, PbC", role = "fnd")
+  desc$add_author(given = "someone", email = "someone@Rstudio.com")
   desc$add_urls("https://github.com/tidyverse/WHATEVER")
+  desc$set_dep("R", "Depends", version = ">= 3.4")
   desc$write()
 
-  expect_true(is_rstudio_pkg())
-  expect_true(is_in_rstudio_org())
-  expect_false(is_rstudio_person_canonical())
+  expect_true(is_posit_pkg())
+  expect_true(is_in_posit_org())
+  expect_false(is_posit_person_canonical())
+  expect_true(author_has_rstudio_email())
 
   expect_snapshot(
     writeLines(release_checklist("1.0.0", on_cran = TRUE)),
@@ -92,6 +123,19 @@ test_that("returns empty string if no bullets", {
     "# Heading"
   )
   expect_equal(news_latest(lines), "")
+})
+
+test_that("can find milestone numbers", {
+  skip_if_offline("github.com")
+
+  expect_equal(
+    gh_milestone_number("r-lib/usethis", "2.1.6", state = "all"),
+    8
+  )
+  expect_equal(
+    gh_milestone_number("r-lib/usethis", "0.0.0", state = "all"),
+    NA_integer_
+  )
 })
 
 # draft release ----------------------------------------------------------------

@@ -43,7 +43,9 @@ NULL
 #'   `.Rbuildignore` and `.gitignore`.
 #' @export
 write_union <- function(path, lines, quiet = FALSE) {
-  stopifnot(is.character(lines))
+  check_name(path)
+  check_character(lines)
+  check_bool(quiet)
   path <- user_path_prep(path)
 
   if (file_exists(path)) {
@@ -69,16 +71,21 @@ write_union <- function(path, lines, quiet = FALSE) {
 #'   necessary or overwriting existing, if proposed contents are not identical
 #'   and user is available to give permission.
 #' @param contents Character vector of lines.
+#' @param overwrite Force overwrite of existing file?
 #' @export
-write_over <- function(path, lines, quiet = FALSE) {
-  stopifnot(is.character(lines), length(lines) > 0)
+write_over <- function(path, lines, quiet = FALSE, overwrite = FALSE) {
+  check_name(path)
+  check_character(lines)
+  stopifnot(length(lines) > 0)
+  check_bool(quiet)
+  check_bool(overwrite)
   path <- user_path_prep(path)
 
   if (same_contents(path, lines)) {
     return(invisible(FALSE))
   }
 
-  if (can_overwrite(path)) {
+  if (overwrite || can_overwrite(path)) {
     if (!quiet) {
       ui_done("Writing {ui_path(path)}")
     }
@@ -96,8 +103,8 @@ read_utf8 <- function(path, n = -1L) {
 }
 
 write_utf8 <- function(path, lines, append = FALSE, line_ending = NULL) {
-  stopifnot(is.character(path))
-  stopifnot(is.character(lines))
+  check_name(path)
+  check_character(lines)
 
   file_mode <- if (append) "ab" else "wb"
   con <- file(path, open = file_mode, encoding = "utf-8")

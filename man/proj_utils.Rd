@@ -65,8 +65,7 @@ project root by looking for a \code{.here} file, an RStudio Project, a package
 \code{DESCRIPTION}, Git infrastructure, a \code{remake.yml} file, or a \code{.projectile}
 file. It then stores the active project for use for the remainder of the
 session.
-}
-\details{
+
 In general, end user scripts should not contain direct calls to
 \verb{usethis::proj_*()} utility functions. They are internal functions that are
 exported for occasional interactive use or use in packages that extend
@@ -74,27 +73,31 @@ usethis. End user code should call functions in
 \href{https://rprojroot.r-lib.org}{rprojroot} or its simpler companion,
 \href{https://here.r-lib.org}{here}, to programmatically detect a project and
 build paths within it.
+
+If you are puzzled why a path (usually the current working directory) does
+\emph{not} appear to be inside project, it can be helpful to call
+\code{here::dr_here()} to get much more verbose feedback.
 }
 \section{Functions}{
 \itemize{
-\item \code{proj_get}: Retrieves the active project and, if necessary,
+\item \code{proj_get()}: Retrieves the active project and, if necessary,
 attempts to set it in the first place.
 
-\item \code{proj_set}: Sets the active project.
+\item \code{proj_set()}: Sets the active project.
 
-\item \code{proj_path}: Builds a path within the active project returned by
+\item \code{proj_path()}: Builds paths within the active project returned by
 \code{proj_get()}. Thin wrapper around \code{\link[fs:path]{fs::path()}}.
 
-\item \code{with_project}: Runs code with a temporary active project and,
+\item \code{with_project()}: Runs code with a temporary active project and,
 optionally, working directory. It is an example of the \verb{with_*()} functions
 in \href{https://withr.r-lib.org}{withr}.
 
-\item \code{local_project}: Sets an active project and, optionally, working
+\item \code{local_project()}: Sets an active project and, optionally, working
 directory until the current execution environment goes out of scope, e.g.
 the end of the current function or test.  It is an example of the
 \verb{local_*()} functions in \href{https://withr.r-lib.org}{withr}.
-}}
 
+}}
 \examples{
 \dontrun{
 ## see the active project

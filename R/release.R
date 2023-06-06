@@ -12,10 +12,18 @@
 #' The checklist contains a generic set of steps that we've found to be helpful,
 #' based on the type of release ("patch", "minor", or "major"). You're
 #' encouraged to edit the issue to customize this list to meet your needs.
-#' If you want to consistently add extra bullets for every release, you can
-#' include your own custom bullets by providing a (unexported) a
-#' `release_bullets()` function that returns a character vector.
-#' (For historical reasons, `release_questions()` is also supported).
+#'
+#' ## Customization
+#'
+#' * If you want to consistently add extra bullets for every release, you can
+#'   include your own custom bullets by providing an (unexported)
+#'   `release_bullets()` function that returns a character vector.
+#'   (For historical reasons, `release_questions()` is also supported).
+#'
+#' * If you want to check additional packages in the revdep check process,
+#'   provide an (unexported) `release_extra_revdeps()` function that
+#'   returns a character vector. This is currently only supported for
+#'   Posit internal check tooling.
 #'
 #' @param version Optional version number for release. If unspecified, you can
 #'   make an interactive choice.
@@ -37,7 +45,11 @@ use_release_issue <- function(version = NULL) {
     }
   }
 
-  version <- version %||% choose_version("What should the release version be?")
+  version <- version %||%
+    choose_version(
+      "What should the release version be?",
+      which = c("major", "minor", "patch")
+    )
   if (is.null(version)) {
     return(invisible(FALSE))
   }
@@ -59,48 +71,62 @@ use_release_issue <- function(version = NULL) {
 release_checklist <- function(version, on_cran) {
   type <- release_type(version)
   cran_results <- cran_results_url()
-  has_src <- dir_exists(proj_path("src"))
   has_news <- file_exists(proj_path("NEWS.md"))
   has_pkgdown <- uses_pkgdown()
+  has_lifecycle <- proj_desc()$has_dep("lifecycle")
   has_readme <- file_exists(proj_path("README.Rmd"))
-  is_rstudio_pkg <- is_rstudio_pkg()
+  has_github_links <- has_github_links()
+  is_posit_pkg <- is_posit_pkg()
+  tidy_min_r_version <- tidy_minimum_r_version()
+
+  milestone_num <- NA # for testing (and general fallback)
+  if (uses_git() && curl::has_internet()) {
+    milestone_num <- tryCatch(
+      gh_milestone_number(target_repo_spec(), version),
+      error = function(e) NA
+    )
+  }
 
   c(
     if (!on_cran) c(
       "First release:",
       "",
+      todo("`usethis::use_news_md()`", !has_news),
       todo("`usethis::use_cran_comments()`"),
       todo("Update (aspirational) install instructions in README"),
       todo("Proofread `Title:` and `Description:`"),
       todo("Check that all exported functions have `@return` and `@examples`"),
       todo("Check that `Authors@R:` includes a copyright holder (role 'cph')"),
-      todo("Check [licensing of included files](https://r-pkgs.org/license.html#code-you-bundle)"),
+      todo("Check [licensing of included files](https://r-pkgs.org/license.html#sec-code-you-bundle)"),
       todo("Review <https://github.com/DavisVaughan/extrachecks>"),
       ""
     ),
     "Prepare for release:",
     "",
     todo("`git pull`"),
+    if (!is.na(milestone_num)) {
+      todo("[Close v{version} milestone](../milestone/{milestone_num})")
+    },
     todo("Check [current CRAN check results]({cran_results})", on_cran),
     todo("
       Check if any deprecation processes should be advanced, as described in \\
       [Gradual deprecation](https://lifecycle.r-lib.org/articles/communicate.html#gradual-deprecation)",
-      type != "patch"),
+      type != "patch" && has_lifecycle),
+    todo("Bump required R version in DESCRIPTION to {tidy_min_r_version}",
+         is_posit_pkg && tidy_min_r_version > pkg_minimum_r_version()),
+    todo("`usethis::use_news_md()`", on_cran && !has_news),
     todo("[Polish NEWS](https://style.tidyverse.org/news.html#news-release)", on_cran),
-    todo("`devtools::build_readme()`", has_readme),
+    todo("`usethis::use_github_links()`", !has_github_links),
     todo("`urlchecker::url_check()`"),
+    todo("`devtools::build_readme()`", has_readme),
     todo("`devtools::check(remote = TRUE, manual = TRUE)`"),
     todo("`devtools::check_win_devel()`"),
-    todo("`rhub::check_for_cran()`"),
-    todo("`rhub::check(platform = 'ubuntu-rchk')`", has_src),
-    todo("`rhub::check_with_sanitizers()`", has_src),
-    todo("`revdepcheck::revdep_check(num_workers = 4)`", on_cran && !is_rstudio_pkg),
-    todo("`revdepcheck::cloud_check()`", on_cran && is_rstudio_pkg),
+    release_revdepcheck(on_cran, is_posit_pkg),
     todo("Update `cran-comments.md`", on_cran),
     todo("`git push`"),
     todo("Draft blog post", type != "patch"),
-    todo("Slack link to draft blog in #open-source-comms", type != "patch" && is_rstudio_pkg),
-    release_extra(),
+    todo("Slack link to draft blog in #open-source-comms", type != "patch" && is_posit_pkg),
+    release_extra_bullets(),
     "",
     "Submit to CRAN:",
     "",
@@ -111,24 +137,54 @@ release_checklist <- function(version, on_cran) {
     "Wait for CRAN...",
     "",
     todo("Accepted :tada:"),
-    todo("`git push`"),
+    todo("Add preemptive link to blog post in pkgdown news menu", type != "patch"),
     todo("`usethis::use_github_release()`"),
-    todo("`usethis::use_dev_version()`"),
+    todo("`usethis::use_dev_version(push = TRUE)`"),
     todo("`usethis::use_news_md()`", !has_news),
-    todo("`git push`"),
     todo("Finish blog post", type != "patch"),
-    todo("Tweet", type != "patch"),
-    todo("Add link to blog post in pkgdown news menu", type != "patch")
+    todo("Tweet", type != "patch")
   )
 }
 
-release_extra <- function(env = NULL) {
-  if (is.null(env)) {
-    env <- tryCatch(
-      pkg_env(project_name()),
-      error = function(e) emptyenv()
-    )
+gh_milestone_number <- function(repo_spec, version, state = "open") {
+  milestones <- gh::gh(
+    "/repos/{repo_spec}/milestones",
+    repo_spec = repo_spec,
+    state = state
+  )
+  titles <- map_chr(milestones, "title")
+  numbers <- map_int(milestones, "number")
+
+  numbers[match(paste0("v", version), titles)]
+}
+
+release_revdepcheck <- function(on_cran = TRUE, is_posit_pkg = TRUE, env = NULL) {
+  if (!on_cran) {
+    return()
   }
+
+  env <- env %||% safe_pkg_env()
+  if (env_has(env, "release_extra_revdeps")) {
+    extra <- env$release_extra_revdeps()
+    stopifnot(is.character(extra))
+  } else {
+    extra <- character()
+  }
+
+  if (is_posit_pkg) {
+    if (length(extra) > 0) {
+      extra_code <- paste0(deparse(extra), collapse = "")
+      todo("`revdepcheck::cloud_check(extra_revdeps = {extra_code})`")
+    } else {
+      todo("`revdepcheck::cloud_check()`")
+    }
+  } else {
+    todo("`revdepcheck::revdep_check(num_workers = 4)`")
+  }
+}
+
+release_extra_bullets <- function(env = NULL) {
+  env <- env %||% safe_pkg_env()
 
   if (env_has(env, "release_bullets")) {
     paste0("* [ ] ", env$release_bullets())
@@ -138,6 +194,13 @@ release_extra <- function(env = NULL) {
   } else {
     character()
   }
+}
+
+safe_pkg_env <- function() {
+  tryCatch(
+    ns_env(project_name()),
+    error = function(e) emptyenv()
+  )
 }
 
 release_type <- function(version) {
@@ -152,28 +215,27 @@ release_type <- function(version) {
   }
 }
 
-#' Draft a GitHub release
+#' Publish a GitHub release
 #'
 #' @description
-#' Creates a __draft__ GitHub release for the current package. Once you are
-#' satisfied that it is correct, you will need to publish the release from
-#' GitHub. The key pieces of info are which commit / SHA to tag, the associated
-#' package version, and the relevant NEWS entries.
+#' Pushes the current branch (if safe) then publishes a GitHub release for the
+#' latest CRAN submission.
 #'
-#' If you use `devtools::release()` or `devtools::submit_cran()` to submit to
-#' CRAN, information about the submitted state is captured in a CRAN-SUBMISSION
-#' or CRAN-RELEASE file. `use_github_release()` uses this info to populate the
-#' draft GitHub release and, after success, deletes the CRAN-SUBMISSION or
-#' CRAN-RELEASE file.
-#'
-#' In the absence of such a file, we must fall back to assuming the current
-#' state (SHA of `HEAD`, package version, NEWS) is the submitted state.
+#' If you use [devtools::submit_cran()] to submit to CRAN, information about the
+#' submitted state is captured in a `CRAN-SUBMISSION` file.
+#' `use_github_release()` uses this info to populate the GitHub release notes
+#' and, after success, deletes the file. In the absence of such a file, we
+#' assume that current state (SHA of `HEAD`, package version, NEWS) is the
+#' submitted state.
 #'
 #' @param host,auth_token `r lifecycle::badge("deprecated")`: No longer
 #'   consulted now that usethis allows the gh package to lookup a token based on
 #'   a URL determined from the current project's GitHub remotes.
+#' @param publish If `TRUE`, publishes a release. If `FALSE`, creates a draft
+#'   release.
 #' @export
-use_github_release <- function(host = deprecated(),
+use_github_release <- function(publish = TRUE,
+                               host = deprecated(),
                                auth_token = deprecated()) {
   check_is_package("use_github_release()")
   if (lifecycle::is_present(host)) {
@@ -184,7 +246,7 @@ use_github_release <- function(host = deprecated(),
   }
 
   tr <- target_repo(github_get = TRUE, ok_configs = c("ours", "fork"))
-  check_can_push(tr = tr, "to draft a release")
+  check_can_push(tr = tr, "to create a release")
 
   dat <- get_release_data(tr)
   release_name <- glue("{dat$Package} {dat$Version}")
@@ -193,29 +255,36 @@ use_github_release <- function(host = deprecated(),
   kv_line("Tag name", tag_name)
   kv_line("SHA", dat$SHA)
 
+  if (git_can_push()) {
+    git_push()
+  }
   check_github_has_SHA(SHA = dat$SHA, tr = tr)
 
-  news <- get_release_news(SHA = dat$SHA, tr = tr)
+  on_cran <- !is.null(cran_version())
+  news <- get_release_news(SHA = dat$SHA, tr = tr, on_cran = on_cran)
 
   gh <- gh_tr(tr)
+
+  ui_cli_inform("Publishing {tag_name} release to GitHub")
   release <- gh(
     "POST /repos/{owner}/{repo}/releases",
-    name = release_name, tag_name = tag_name,
-    target_commitish = dat$SHA, body = news, draft = TRUE
+    name = release_name,
+    tag_name = tag_name,
+    target_commitish = dat$SHA,
+    body = news,
+    draft = !publish
   )
+  ui_cli_inform("Release at {.url {release$html_url}}")
 
   if (!is.null(dat$file)) {
-    ui_done("{ui_path(dat$file)} deleted")
+    ui_cli_inform("Deleting {.path {dat$file}}")
     file_delete(dat$file)
   }
 
-  Sys.sleep(1)
-  view_url(release$html_url)
-  ui_todo("Publish the release via \"Edit draft\" > \"Publish release\"")
+  invisible()
 }
 
 get_release_data <- function(tr = target_repo(github_get = TRUE)) {
-  package <- package_data()
   cran_submission <-
     path_first_existing(proj_path(c("CRAN-SUBMISSION", "CRAN-RELEASE")))
 
@@ -224,8 +293,8 @@ get_release_data <- function(tr = target_repo(github_get = TRUE)) {
     challenge_non_default_branch()
     check_branch_pushed()
     return(list(
-      Package = package$Package,
-      Version = package$Version,
+      Package = project_name(),
+      Version = proj_version(),
       SHA = gert::git_info(repo = git_repo())$commit
     ))
   }
@@ -257,17 +326,17 @@ get_release_data <- function(tr = target_repo(github_get = TRUE)) {
 
     HEAD <- gert::git_info(repo = git_repo())$commit
     if (HEAD == sha) {
-      version <- package$Version
+      version <- proj_version()
     } else {
-      tf <- glue("{package_data()$Package}-DESCRIPTION-{substr(sha, 1, 7)}-")
-      tf <- withr::local_tempfile(pattern = tf)
+      tf <- withr::local_tempfile()
       gh(
         "/repos/{owner}/{repo}/contents/{path}",
-        path = "DESCRIPTION", ref = sha,
+        path = "DESCRIPTION",
+        ref = sha,
         .destfile = tf,
         .accept = "application/vnd.github.v3.raw"
       )
-      version <- desc::desc(file = tf)$get_version()
+      version <- desc::desc_get_version(tf)
     }
 
     out <- list(
@@ -277,7 +346,7 @@ get_release_data <- function(tr = target_repo(github_get = TRUE)) {
     )
   }
 
-  out$Package <- package$Package
+  out$Package <- project_name()
   out$file <- cran_submission
   ui_done("
     {ui_path(out$file)} file found, from a submission on {as.Date(out$Date)}")
@@ -304,31 +373,34 @@ check_github_has_SHA <- function(SHA = gert::git_info(repo = git_repo())$commit,
 }
 
 get_release_news <- function(SHA = gert::git_info(repo = git_repo())$commit,
-                             tr = target_repo(github_get = TRUE)) {
-  package <- package_data()
+                             tr = target_repo(github_get = TRUE),
+                             on_cran = !is.null(cran_version())) {
   HEAD <- gert::git_info(repo = git_repo())$commit
 
   if (HEAD == SHA) {
     news_path <- proj_path("NEWS.md")
+    news <- if (file_exists(news_path)) read_utf8(news_path) else NULL
   } else {
-    news_path <- glue("{package_data()$Package}-NEWS-{substr(SHA, 1, 7)}-")
-    news_path <- withr::local_tempfile(pattern = news_path)
-    gh <- purrr::possibly(gh_tr(tr), otherwise = NULL)
-    gh(
-      "/repos/{owner}/{repo}/contents/{path}",
-      path = "NEWS.md", ref = SHA,
-      .destfile = news_path,
-      .accept = "application/vnd.github.v3.raw"
+    news <- tryCatch(
+      read_github_file(
+        tr$repo_spec,
+        path = "NEWS.md",
+        ref = SHA,
+        host = tr$api_url
+      ),
+      github_error = NULL
     )
   }
 
-  if (file_exists(news_path)) {
-    news <- news_latest(read_utf8(news_path))
+  if (is.null(news)) {
+    ui_oops("
+      Can't find {ui_path('NEWS.md')} in the released package source.
+      usethis consults this file for release notes.
+      Call {ui_code('usethis::use_news_md()')} to set this up for the future.")
+    if (on_cran) "-- no release notes --" else "Initial release"
   } else {
-    news <- "Initial release"
+    news_latest(news)
   }
-
-  news
 }
 
 cran_version <- function(package = project_name(),
@@ -367,44 +439,44 @@ news_latest <- function(lines) {
   paste0(news, "\n", collapse = "")
 }
 
-is_rstudio_pkg <- function() {
-  is_rstudio_cph_or_fnd() || is_in_rstudio_org()
+is_posit_pkg <- function() {
+  is_posit_cph_or_fnd() || is_in_posit_org()
 }
 
-is_rstudio_cph_or_fnd <- function() {
+is_posit_cph_or_fnd <- function() {
   if (!is_package()) {
     return(FALSE)
   }
-  roles <- get_rstudio_roles()
+  roles <- get_posit_roles()
   "cph" %in% roles || "fnd" %in% roles
 }
 
-is_rstudio_person_canonical <- function() {
+is_posit_person_canonical <- function() {
   if (!is_package()) {
     return(FALSE)
   }
-  roles <- get_rstudio_roles()
+  roles <- get_posit_roles()
   length(roles) > 0 &&
     "fnd" %in% roles &&
     "cph" %in% roles &&
     attr(roles, "appears_in", exact = TRUE) == "given" &&
-    attr(roles, "appears_as", exact = TRUE) == "RStudio"
+    attr(roles, "appears_as", exact = TRUE) == "Posit Software, PBC"
 }
 
-get_rstudio_roles <- function() {
+get_posit_roles <- function() {
   if (!is_package()) {
     return()
   }
 
-  desc <- desc::desc(file = proj_get())
+  desc <- proj_desc()
   fnd <- unclass(desc$get_author("fnd"))
   cph <- unclass(desc$get_author("cph"))
 
-  detect_rstudio <- function(x) {
-    any(grepl("rstudio", tolower(x[c("given", "family")])))
+  detect_posit <- function(x) {
+    any(grepl("rstudio|posit", tolower(x[c("given", "family")])))
   }
-  fnd <- purrr::keep(fnd, detect_rstudio)
-  cph <- purrr::keep(cph, detect_rstudio)
+  fnd <- purrr::keep(fnd, detect_posit)
+  cph <- purrr::keep(cph, detect_posit)
 
   if (length(fnd) < 1 && length(cph) < 1) {
     return(character())
@@ -422,18 +494,18 @@ get_rstudio_roles <- function() {
   out
 }
 
-is_in_rstudio_org <- function() {
+is_in_posit_org <- function() {
   if (!is_package()) {
     return(FALSE)
   }
-  desc <- desc::desc(file = proj_get())
+  desc <- proj_desc()
   urls <- desc$get_urls()
   dat <- parse_github_remotes(urls)
   dat <- dat[dat$host == "github.com", ]
-  purrr::some(dat$repo_owner, ~ .x %in% rstudio_orgs())
+  purrr::some(dat$repo_owner, ~ .x %in% posit_orgs())
 }
 
-rstudio_orgs <- function() {
+posit_orgs <- function() {
   c(
     "tidyverse",
     "r-lib",
@@ -447,4 +519,21 @@ todo <- function(x, cond = TRUE) {
   if (cond) {
     paste0("* [ ] ", x)
   }
+}
+
+author_has_rstudio_email <- function() {
+  if (!is_package()) {
+    return()
+  }
+  desc <- proj_desc()
+  any(grepl("@rstudio[.]com", tolower(desc$get_authors())))
+}
+
+pkg_minimum_r_version <- function() {
+  deps <- proj_desc()$get_deps()
+  r_dep <- deps[deps$package == "R" & deps$type == "Depends", "version"]
+  if (length(r_dep) == 0) {
+    return(numeric_version(0))
+  }
+  numeric_version(gsub("[^0-9.]", "", r_dep))
 }

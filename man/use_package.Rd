@@ -16,8 +16,8 @@ use_dev_package(package, type = "Imports", remote = NULL)
 "Suggests", "Enhances", or "LinkingTo" (or unique abbreviation). Matching
 is case insensitive.}
 
-\item{min_version}{Optionally, supply a minimum version for the package.
-Set to \code{TRUE} to use the currently installed version.}
+\item{min_version}{Optionally, supply a minimum version for the package. Set
+to \code{TRUE} to use the currently installed version.}
 
 \item{remote}{By default, an \code{OWNER/REPO} GitHub remote is inserted.
 Optionally, you can supply a character string to specify the remote, e.g.
@@ -25,17 +25,34 @@ Optionally, you can supply a character string to specify the remote, e.g.
 }
 \description{
 \code{use_package()} adds a CRAN package dependency to \code{DESCRIPTION} and offers a
-little advice about how to best use it. \code{use_dev_package()} adds a
-dependency on an in-development package, adding the dev repo to \code{Remotes} so
-it will be automatically installed from the correct location.
+little advice about how to best use it. \code{use_dev_package()} adds a dependency
+on an in-development package, adding the dev repo to \code{Remotes} so it will be
+automatically installed from the correct location. There is no helper to
+remove a dependency: to do that, simply remove that package from your
+\code{DESCRIPTION} file.
+
+\code{use_package()} exists to support a couple of common maneuvers:
+\itemize{
+\item Add a dependency to \code{Imports} or \code{Suggests} or \code{LinkingTo}.
+\item Add a minimum version to a dependency.
+\item Specify the minimum supported version for R.
+}
+
+\code{use_package()} probably works for slightly more exotic modifications, but at
+some point, you should edit \code{DESCRIPTION} yourself by hand. There is no
+intention to account for all possible edge cases.
 }
 \examples{
 \dontrun{
 use_package("ggplot2")
 use_package("dplyr", "suggests")
 use_dev_package("glue")
+
+# Depend on R version 4.1
+use_package("R", type = "Depends", min_version = "4.1")
 }
 }
 \seealso{
-The \href{https://r-pkgs.org/description.html#dependencies}{dependencies section} of \href{https://r-pkgs.org}{R Packages}.
+The \href{https://r-pkgs.org/dependencies-mindset-background.html}{dependencies section} of
+\href{https://r-pkgs.org}{R Packages}.
 }

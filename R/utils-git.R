@@ -1,7 +1,7 @@
 # gert -------------------------------------------------------------------------
 
 gert_shush <- function(expr, regexp) {
-  stopifnot(is.character(regexp))
+  check_character(regexp)
   withCallingHandlers(
     gertMessage = function(cnd) {
       m <- map_lgl(regexp, ~ grepl(.x, cnd_message(cnd), perl = TRUE))
@@ -52,16 +52,42 @@ git_init <- function() {
 # config
 git_cfg_get <- function(name, where = c("de_facto", "local", "global")) {
   where <- match.arg(where)
+
+  if (where == "de_facto") {
+    return(git_cfg_get(name, "local") %||% git_cfg_get(name, "global"))
+  }
+
   if (where == "global" || !uses_git()) {
     dat <- gert::git_config_global()
   } else {
     dat <- gert::git_config(repo = git_repo())
   }
+
   if (where == "local") {
     dat <- dat[dat$level == "local", ]
   }
+
   out <- dat$value[tolower(dat$name) == tolower(name)]
   if (length(out) > 0) out else NULL
+}
+
+# more-specific case for user-name and -email
+git_user_get <- function(where = c("de_facto", "local", "global")) {
+  where <- match.arg(where)
+
+  list(
+    name = git_cfg_get("user.name", where),
+    email = git_cfg_get("user.email", where)
+  )
+}
+
+# translate from "usethis" terminology to "git" terminology
+where_from_scope <- function(scope = c("user", "project")) {
+  scope = match.arg(scope)
+
+  where_scope <- c(user = "global", project = "de_facto")
+
+  where_scope[scope]
 }
 
 # ensures that core.excludesFile is configured
@@ -90,10 +116,9 @@ ensure_core_excludesFile <- function() {
   invisible()
 }
 
-
 # Status------------------------------------------------------------------------
 git_status <- function(untracked) {
-  stopifnot(is_true(untracked) || is_false(untracked))
+  check_bool(untracked)
   st <- gert::git_status(repo = git_repo())
   if (!untracked) {
     st <- st[st$status != "new", ]
@@ -102,7 +127,7 @@ git_status <- function(untracked) {
 }
 
 # Commit -----------------------------------------------------------------------
-git_ask_commit <- function(message, untracked, paths = NULL) {
+git_ask_commit <- function(message, untracked, push = FALSE, paths = NULL) {
   if (!is_interactive() || !uses_git()) {
     return(invisible())
   }
@@ -143,9 +168,22 @@ git_ask_commit <- function(message, untracked, paths = NULL) {
     paste0("* ", ui_paths)
   ))
 
-  if (ui_yeah("Is it ok to commit {if (n == 1) 'it' else 'them'}?")) {
+  # Only push if no remote & a single change
+  push <- push && git_can_push(max_local = 1)
+
+  msg <- paste0(
+    "Is it ok to commit ",
+    if (push) "and push ",
+    if (n == 1) 'it' else 'them',
+    "?"
+  )
+  if (ui_yeah(msg)) {
     git_commit(paths, message)
+    if (push) {
+      git_push()
+    }
   }
+
   invisible()
 }
 
@@ -221,6 +259,7 @@ remref_branch <- function(remref) git_parse_remref(remref)$branch
 # Pull from remref or upstream tracking. If neither given/exists, do nothing.
 # Therefore, this does less than `git pull`.
 git_pull <- function(remref = NULL, verbose = TRUE) {
+  check_string(remref, allow_na = TRUE, allow_null = TRUE)
   repo <- git_repo()
   branch <- git_branch()
   remref <- remref %||% git_branch_tracking(branch)
@@ -230,7 +269,6 @@ git_pull <- function(remref = NULL, verbose = TRUE) {
     }
     return(invisible())
   }
-  stopifnot(is_string(remref))
   if (verbose) {
     ui_done("Pulling from {ui_value(remref)}.")
   }
@@ -290,6 +328,45 @@ git_branch_compare <- function(branch = git_branch(), remref = NULL) {
   )
   out <- gert::git_ahead_behind(upstream = remref, ref = branch, repo = git_repo())
   list(local_only = out$ahead, remote_only = out$behind)
+}
+
+git_can_push <- function(max_local = Inf, branch = git_branch(), remref = NULL) {
+  remref <- remref %||% git_branch_tracking(branch)
+  if (is.null(remref)) {
+    return(FALSE)
+  }
+  comp <- git_branch_compare(branch, remref)
+  comp$remote_only == 0 && comp$local_only <= max_local
+}
+
+git_push <- function(branch = git_branch(), remref = NULL, verbose = TRUE) {
+  remref <- remref %||% git_branch_tracking(branch)
+  if (verbose) {
+    ui_done("Pushing local {ui_value(branch)} branch to {ui_value(remref)}.")
+  }
+
+  gert::git_push(
+    remote = remref_remote(remref),
+    refspec = glue("refs/heads/{branch}:refs/heads/{remref_branch(remref)}"),
+    verbose = FALSE,
+    repo = git_repo()
+  )
+}
+
+git_push_first <- function(branch = git_branch(), remote = "origin", verbose = TRUE) {
+  if (verbose) {
+    remref <- glue("{remote}/{branch}")
+    ui_done("
+        Pushing {ui_value(branch)} branch to GitHub and setting \\
+        {ui_value(remref)} as upstream branch"
+    )
+  }
+  gert::git_push(
+    remote = remote,
+    set_upstream = TRUE,
+    verbose = FALSE,
+    repo = git_repo()
+  )
 }
 
 # Checks ------------------------------------------------------------------

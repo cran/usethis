@@ -14,6 +14,19 @@ test_that("use_package() guides new packages but not pre-existing ones", {
   })
 })
 
+test_that("use_package() handles R versions with aplomb", {
+  create_local_package()
+  withr::local_options(usethis.quiet = FALSE)
+  expect_snapshot(use_package("R"), error = TRUE)
+  expect_snapshot(use_package("R", type = "Depends"), error = TRUE)
+  expect_snapshot(use_package("R", type = "Depends", min_version = "3.6"))
+  expect_equal(subset(proj_deps(), package == "R")$version, ">= 3.6")
+  local_mocked_bindings(r_version = function() "4.1")
+
+  expect_snapshot(use_package("R", type = "Depends", min_version = TRUE))
+  expect_equal(subset(proj_deps(), package == "R")$version, ">= 4.1")
+})
+
 test_that("use_package(type = 'Suggests') guidance w/o and w/ rlang", {
   create_local_package()
   withr::local_options(usethis.quiet = FALSE)
@@ -25,13 +38,20 @@ test_that("use_package(type = 'Suggests') guidance w/o and w/ rlang", {
 
 # use_dev_package() -----------------------------------------------------------
 
+test_that("use_dev_package() writes a remote", {
+  create_local_package()
+  local_ui_yeah()
+
+  use_dev_package("usethis")
+  expect_equal(proj_desc()$get_remotes(), "r-lib/usethis")
+})
+
 test_that("use_dev_package() can override over default remote", {
   create_local_package()
 
   use_dev_package("usethis", remote = "github::r-lib/usethis")
 
-  desc <- desc::desc(proj_path("DESCRIPTION"))
-  expect_equal(desc$get_remotes(), "github::r-lib/usethis")
+  expect_equal(proj_desc()$get_remotes(), "github::r-lib/usethis")
 })
 
 test_that("package_remote() works for an installed package with github URL", {
@@ -39,10 +59,8 @@ test_that("package_remote() works for an installed package with github URL", {
     "Package: test",
     "URL: https://github.com/OWNER/test"
   ))
-  with_mock(
-    ui_yeah = function(...) TRUE,
-    expect_equal(package_remote(d), "OWNER/test")
-  )
+  local_ui_yeah()
+  expect_equal(package_remote(d), "OWNER/test")
 })
 
 test_that("package_remote() works for package installed from github or gitlab", {

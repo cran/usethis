@@ -18,11 +18,9 @@
 #'       download URL for the target ZIP file. The helper
 #'       [create_download_url()] helps to create such URLs for GitHub, DropBox,
 #'       and Google Drive.
-#' @param destdir The new folder is stored here. If `NULL`, defaults to user's
-#'   Desktop or some other conspicuous place. You can also set a default
-#'   location using the option `usethis.destdir`, e.g.
-#'   `options(usethis.destdir = "a/good/dir")`, perhaps saved to your
-#'   `.Rprofile` with [`edit_r_profile()`]
+#' @param destdir Destination for the new folder. Defaults to the location
+#'   stored in the global option `usethis.destdir`, if defined, or to the user's
+#'   Desktop or similarly conspicuous place otherwise.
 #' @param cleanup Whether to delete the original ZIP file after unpacking its
 #'   contents. In an interactive setting, `NA` leads to a menu where user can
 #'   approve the deletion (or decline).
@@ -139,7 +137,7 @@ use_zip <- function(url,
 #' ## DropBox
 #'
 #' To make a folder available for ZIP download, create a shared link for it:
-#' * <https://help.dropbox.com/files-folders/share/view-only-access>
+#' * <https://help.dropbox.com/share/create-and-share-link>
 #'
 #' A shared link will have this form:
 #' ```
@@ -154,8 +152,8 @@ use_zip <- function(url,
 #' This download link (or a shortlink that points to it) is suitable as input
 #' for `tidy_download()`. After one or more redirections, this link will
 #' eventually lead to a download URL. For more details, see
-#' <https://help.dropbox.com/files-folders/share/force-download> and
-#' <https://help.dropbox.com/installs-integrations/sync-uploads/download-entire-folders>.
+#' <https://help.dropbox.com/share/force-download> and
+#' <https://help.dropbox.com/sync/download-entire-folders>.
 #'
 #' ## GitHub
 #'
@@ -383,7 +381,7 @@ tidy_unzip <- function(zipfile, cleanup = FALSE) {
   }
 
   if (is_interactive()) {
-    rproj_path <- dir_ls(target, regexp = "[.]Rproj$")
+    rproj_path <- rproj_paths(target)
     if (length(rproj_path) == 1 && rstudioapi::hasFun("openProject")) {
       ui_done("Opening project in RStudio")
       rstudioapi::openProject(target, newSession = TRUE)
@@ -412,7 +410,7 @@ tidy_unzip <- function(zipfile, cleanup = FALSE) {
 #' create_download_url("https://drive.google.com/open?id=123456789xxyyyzzz/view")
 #' @export
 create_download_url <- function(url) {
-  stopifnot(is_string(url))
+  check_name(url)
   stopifnot(grepl("^http[s]?://", url))
 
   switch(
@@ -471,7 +469,7 @@ hopeless_url <- function(url) {
 }
 
 normalize_url <- function(url) {
-  stopifnot(is.character(url))
+  check_name(url)
   has_scheme <- grepl("^http[s]?://", url)
 
   if (has_scheme) {
@@ -605,7 +603,7 @@ make_filename <- function(cd,
   ## https://tools.ietf.org/html/rfc6266
   cd <- cd[["filename"]]
   if (is.null(cd) || is.na(cd)) {
-    stopifnot(is_string(fallback))
+    check_name(fallback)
     return(path_sanitize(fallback))
   }
 

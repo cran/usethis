@@ -13,11 +13,11 @@ test_that("github_url() works on active project", {
   expect_usethis_error(github_url(), "no GitHub remotes")
 
   use_description()
-  use_description_field("URL", "https://example.com")
+  proj_desc_field_update("URL", "https://example.com")
   expect_usethis_error(github_url(), "no GitHub remotes")
 
   issues <- "https://github.com/OWNER/REPO_BUGREPORTS/issues"
-  use_description_field("BugReports", issues)
+  proj_desc_field_update("BugReports", issues)
   expect_equal(github_url(), "https://github.com/OWNER/REPO_BUGREPORTS")
 
   origin <- "https://github.com/OWNER/REPO_ORIGIN"
@@ -75,7 +75,6 @@ test_that("desc_urls() returns data frame for locally installed package", {
 })
 
 test_that("desc_urls() returns data frame for an uninstalled package", {
-  skip_on_cran()
   skip_if_offline()
 
   pkg <- "devoid"
@@ -88,7 +87,6 @@ test_that("desc_urls() returns data frame for an uninstalled package", {
 })
 
 test_that("desc_urls() returns NULL for an nonexistent package", {
-  skip_on_cran()
   skip_if_offline()
 
   expect_null(desc_urls("1234"))
@@ -108,9 +106,6 @@ test_that("browse_XXX() goes to correct URL", {
   expect_equal(browse_github_pulls("gh", 1), g("r-lib/gh/pull/1"))
 
   expect_match(browse_github_actions("gh"), g("r-lib/gh/actions"))
-
-  expect_equal(browse_travis("usethis"), "https://travis-ci.com/r-lib/usethis")
-  expect_equal(browse_travis("usethis", ext = "org"), "https://travis-ci.org/r-lib/usethis")
 
   expect_equal(browse_cran("usethis"), "https://cran.r-project.org/package=usethis")
 })
@@ -134,9 +129,9 @@ test_that("browse_package() returns URLs", {
 
   use_description()
   pkgdown <- "https://example.com"
-  use_description_field("URL", pkgdown)
+  proj_desc_field_update("URL", pkgdown)
   issues <- "https://github.com/OWNER/REPO/issues"
-  use_description_field("BugReports", issues)
+  proj_desc_field_update("BugReports", issues)
 
   out <- browse_package()
   expect_setequal(out, c(origin, foofy, pkgdown, issues))

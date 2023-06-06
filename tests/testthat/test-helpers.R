@@ -65,11 +65,11 @@ test_that("use_dependency() upgrades a dependency", {
   withr::local_options(list(usethis.quiet = FALSE, crayon.enabled = FALSE))
 
   expect_message(use_dependency("usethis", "Suggests"))
-  expect_match(desc::desc_get("Suggests", proj_get()), "usethis")
+  expect_match(desc::desc_get("Suggests"), "usethis")
 
   expect_message(use_dependency("usethis", "Imports"), "Moving 'usethis'")
-  expect_match(desc::desc_get("Imports", proj_get()), "usethis")
-  expect_false(grepl("usethis", desc::desc_get("Suggests", proj_get())))
+  expect_match(desc::desc_get("Imports"), "usethis")
+  expect_false(grepl("usethis", desc::desc_get("Suggests")))
 })
 
 ## https://github.com/r-lib/usethis/issues/99
@@ -78,56 +78,49 @@ test_that("use_dependency() declines to downgrade a dependency", {
   withr::local_options(list(usethis.quiet = FALSE, crayon.enabled = FALSE))
 
   expect_message(use_dependency("usethis", "Imports"))
-  expect_match(desc::desc_get("Imports", proj_get()), "usethis")
+  expect_match(desc::desc_get("Imports"), "usethis")
 
   expect_warning(use_dependency("usethis", "Suggests"), "no change")
-  expect_match(desc::desc_get("Imports", proj_get()), "usethis")
-  expect_false(grepl("usethis", desc::desc_get("Suggests", proj_get())))
+  expect_match(desc::desc_get("Imports"), "usethis")
+  expect_false(grepl("usethis", desc::desc_get("Suggests")))
 })
 
 test_that("can add LinkingTo dependency if other dependency already exists", {
   create_local_package()
-  withr::local_options(list(usethis.quiet = FALSE, crayon.enabled = FALSE))
+  use_dependency("rlang", "Imports")
 
-  expect_message(use_dependency("Rcpp", "Imports"), "Adding 'Rcpp'")
-  expect_message(use_dependency("Rcpp", "LinkingTo"), "Adding 'Rcpp'")
-  expect_message(use_dependency("Rcpp", "LinkingTo"), "Adding 'Rcpp'")
-  expect_message(use_dependency("Rcpp", "Import"), "Adding 'Rcpp'")
+  withr::local_options(list(usethis.quiet = FALSE))
+  expect_snapshot(
+    use_dependency("rlang", "LinkingTo")
+  )
+  deps <- proj_deps()
+  expect_setequal(deps$type, c("Imports", "LinkingTo"))
+  expect_true(all(deps$package == "rlang"))
 })
 
-# use_system_requirement ------------------------------------------------
-
-test_that("we message for new requirements and are silent for existing requirements", {
+test_that("use_dependency() does not fall over on 2nd LinkingTo request", {
   create_local_package()
-  withr::local_options(list(usethis.quiet = FALSE, crayon.enabled = FALSE))
+  local_interactive(FALSE)
 
-  expect_message(
-    use_system_requirement("C++11"),
-    "Adding 'C++11' to SystemRequirements field in DESCRIPTION",
-    fixed = TRUE
-  )
+  use_dependency("rlang", "LinkingTo")
 
-  expect_silent(use_system_requirement("C++11"))
+  withr::local_options(list(usethis.quiet = FALSE))
+
+  expect_snapshot(use_dependency("rlang", "LinkingTo"))
 })
 
-test_that("we can add multiple requirements with repeated calls", {
-  pkg <- create_local_package()
-  withr::local_options(list(usethis.quiet = FALSE, crayon.enabled = FALSE))
+# https://github.com/r-lib/usethis/issues/1649
+test_that("use_dependency() can level up a LinkingTo dependency", {
+  create_local_package()
 
-  expect_message(
-    use_system_requirement("C++11"),
-    "Adding 'C++11' to SystemRequirements field in DESCRIPTION",
-    fixed = TRUE
-  )
+  use_dependency("rlang", "LinkingTo")
+  use_dependency("rlang", "Suggests")
 
-  expect_message(
-    use_system_requirement("libxml2"),
-    "Adding 'libxml2' to SystemRequirements field in DESCRIPTION",
-    fixed = TRUE
-  )
+  withr::local_options(list(usethis.quiet = FALSE))
 
-  expect_equal(
-    unname(desc::desc_get("SystemRequirements", pkg)),
-    "C++11, libxml2"
-  )
+  expect_snapshot(use_package("rlang"))
+  deps <- proj_deps()
+  expect_setequal(deps$type, c("Imports", "LinkingTo"))
+  expect_true(all(deps$package == "rlang"))
 })
+

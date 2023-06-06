@@ -4,13 +4,14 @@ test_that("use_rcpp() requires a package", {
 })
 
 test_that("use_rcpp() creates files/dirs, edits DESCRIPTION and .gitignore", {
-  pkg <- create_local_package()
+  create_local_package()
   use_roxygen_md()
 
-  use_rcpp()
-  expect_match(desc::desc_get("LinkingTo", pkg), "Rcpp")
-  expect_match(desc::desc_get("Imports", pkg), "Rcpp")
+  use_rcpp("test")
+  expect_match(desc::desc_get("LinkingTo"), "Rcpp")
+  expect_match(desc::desc_get("Imports"), "Rcpp")
   expect_proj_dir("src")
+  expect_proj_file("src", "test.cpp")
 
   ignores <- read_utf8(proj_path("src", ".gitignore"))
   expect_true(all(c("*.o", "*.so", "*.dll") %in% ignores))
@@ -21,11 +22,11 @@ test_that("use_rcpp_armadillo() creates Makevars files and edits DESCRIPTION", {
   use_roxygen_md()
 
   local_interactive(FALSE)
-  with_mock(
-    # Required to pass the check re: whether RcppArmadillo is installed
-    check_installed = function(pkg) TRUE,
-    use_rcpp_armadillo()
-  )
+  # pretend RcppArmadillo is installed
+  local_check_installed()
+
+  use_rcpp_armadillo("code")
+  expect_proj_file("src", "code.cpp")
   expect_match(desc::desc_get("LinkingTo"), "RcppArmadillo")
   expect_proj_file("src", "Makevars")
   expect_proj_file("src", "Makevars.win")
@@ -35,11 +36,10 @@ test_that("use_rcpp_eigen() edits DESCRIPTION", {
   create_local_package()
   use_roxygen_md()
 
-  with_mock(
-    # Required to pass the check re: whether RcppEigen is installed
-    check_installed = function(pkg) TRUE,
-    use_rcpp_eigen()
-  )
+  # pretend RcppArmadillo is installed
+  local_check_installed()
+  use_rcpp_eigen("code")
+  expect_proj_file("src", "code.cpp")
   expect_match(desc::desc_get("LinkingTo"), "RcppEigen")
 })
 

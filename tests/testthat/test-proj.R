@@ -16,7 +16,7 @@ test_that("proj_set() errors if no criteria are fulfilled", {
 test_that("proj_set() can be forced, even if no criteria are fulfilled", {
   tmpdir <- withr::local_tempdir(pattern = "i-am-not-a-project")
 
-  expect_error_free(old <- proj_set(tmpdir, force = TRUE))
+  expect_no_error(old <- proj_set(tmpdir, force = TRUE))
   withr::defer(proj_set(old))
   expect_identical(proj_get(), proj_path_prep(tmpdir))
 })
@@ -46,6 +46,18 @@ test_that("proj_path() appends to the project path", {
     path(proj_get(), "a/b/c")
   )
   expect_identical(proj_path("a", "b", "c"), proj_path("a/b/c"))
+})
+
+test_that("proj_path() errors with absolute paths", {
+  create_local_project()
+  expect_snapshot(proj_path(c("/a", "b", "/c")), error = TRUE)
+  expect_snapshot(proj_path("/a", "b", "/c"), error = TRUE)
+  expect_snapshot(proj_path("/a", c("b", "/c")), error = TRUE)
+})
+
+test_that("proj_path() with no inputs returns result of length 1, not 0", {
+  create_local_project()
+  expect_equal(proj_path(), proj_get())
 })
 
 test_that("proj_rel_path() returns path part below the project", {
@@ -208,15 +220,12 @@ test_that("proj_activate() works with relative path when RStudio is not detected
   orig_proj <- proj_get_()
   withr::defer(proj_set(orig_proj, force = TRUE))
   withr::local_dir(sandbox)
+  local_rstudio_available(FALSE)
 
   rel_path_proj <- path_file(file_temp(pattern = "mno"))
   out_path <- create_project(rel_path_proj, rstudio = FALSE, open = FALSE)
-  with_mock(
-    # make sure we act as if not in RStudio
-    rstudio_available = function(...) FALSE,
-    expect_error_free(
-      result <- proj_activate(rel_path_proj)
-    )
+  expect_no_error(
+    result <- proj_activate(rel_path_proj)
   )
   expect_true(result)
   expect_equal(path_wd(), out_path)

@@ -80,25 +80,22 @@
 #'
 #' @section Overview of all the functions:
 
-#' * `pr_init()`: Does a preparatory pull of the default branch from the source
-#' repo, to get a good start point. Creates and checks out a new branch. Nothing
-#' is pushed to or created on GitHub (that does not happen until the first time
-#' you call `pr_push()`).
+#' * `pr_init()`: As a contributor, start work on a new PR by ensuring that
+#' your local repo is up-to-date, then creating and checking out a new branch.
+#' Nothing is pushed to or created on GitHub until you call `pr_push()`.
+
+#' * `pr_fetch()`: As a maintainer, review or contribute changes to an existing
+#' PR by creating a local branch that tracks the remote PR. `pr_fetch()` does as
+#' little work as possible, so you can also use it to resume work on an PR that
+#' already has a local branch (where it will also ensure your local branch is
+#' up-to-date). If called with no arguments, up to 9 open PRs are offered for
+#' interactive selection.
 
 #' * `pr_resume()`: Resume work on a PR by switching to an existing local branch
 #' and pulling any changes from its upstream tracking branch, if it has one. If
 #' called with no arguments, up to 9 local branches are offered for interactive
 #' selection, with a preference for branches connected to PRs and for branches
 #' with recent activity.
-
-#' * `pr_fetch()`: Checks out a PR on the source repo for local exploration. If
-#' called with no arguments, up to 9 open PRs are offered for interactive
-#' selection. This can cause a new remote to be configured and a new local
-#' branch to be created. The local branch is configured to track its remote
-#' counterpart. The transport protocol (HTTPS vs SSH) for any new remote is
-#' inherited from the remote representing the source repo. `pr_fetch()` puts a
-#' maintainer in a position where they can push changes into an internal or
-#' external PR via `pr_push()`.
 
 #' * `pr_push()`: The first time it's called, a PR branch is pushed to GitHub
 #' and you're taken to a webpage where a new PR (or draft PR) can be created.
@@ -116,6 +113,8 @@
 
 #' * `pr_pause()`: Makes sure you're up-to-date with any remote changes in the
 #' PR. Then switches back to the default branch and pulls from the source repo.
+#' Use `pr_resume()` with name of branch or use `pr_fetch()` to resume using PR
+#' number.
 
 #' * `pr_view()`: Visits the PR associated with the current branch in the
 #' browser (default) or the specific PR identified by `number`.
@@ -206,7 +205,7 @@ pr_init <- function(branch) {
     if (!is.na(remref)) {
       comparison <- git_branch_compare(current_branch, remref)
       if (comparison$remote_only > 0) {
-        challenge_uncommitted_changes(untracked = TRUE)
+        challenge_uncommitted_changes()
       }
       ui_done("Pulling changes from {ui_value(remref)}.")
       git_pull(remref = remref, verbose = FALSE)
@@ -253,7 +252,7 @@ pr_resume <- function(branch = NULL) {
       Call {ui_code(code)} to create a new PR branch.")
   }
 
-  challenge_uncommitted_changes(untracked = TRUE)
+  challenge_uncommitted_changes()
 
   ui_done("Switching to branch {ui_value(branch)}.")
   gert::git_branch_checkout(branch, repo = repo)
@@ -384,22 +383,15 @@ pr_push <- function() {
       )
       title <- glue("Which repo do you want to push to?")
       choice <- utils::menu(choices, graphics = FALSE, title = title)
-      remote <-  names(choices)[[choice]]
+      remote <- names(choices)[[choice]]
     } else {
       remote <- "origin"
     }
-    ui_done("
-      Pushing local {ui_value(branch)} branch to {ui_value(remote)} remote.")
-    gert::git_push(remote = remote, verbose = FALSE, repo = repo)
+
+    git_push_first(branch, remote)
   } else {
     check_branch_pulled(use = "pr_pull()")
-    ui_done("Pushing local {ui_value(branch)} branch to {ui_value(remref)}.")
-    gert::git_push(
-      remote = remref_remote(remref),
-      refspec = glue("refs/heads/{branch}:refs/heads/{remref_branch(remref)}"),
-      verbose = FALSE,
-      repo = repo
-    )
+    git_push(branch, remref)
   }
 
   # Prompt to create PR if does not exist yet

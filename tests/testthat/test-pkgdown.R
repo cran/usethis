@@ -6,11 +6,11 @@ test_that("use_pkgdown() requires a package", {
 test_that("use_pkgdown() creates and ignores the promised file/dir", {
   create_local_package()
   local_interactive(FALSE)
-  with_mock(
-    check_installed = function(pkg) TRUE,
-    pkgdown_version = function() "1.9000",
-    use_pkgdown()
-  )
+  local_check_installed()
+  local_mocked_bindings(pkgdown_version = function() "1.9000")
+
+  use_pkgdown()
+
   expect_true(uses_pkgdown())
   expect_true(is_build_ignored("^_pkgdown\\.yml$"))
   expect_true(is_build_ignored("^docs$"))
@@ -28,11 +28,10 @@ test_that("pkgdown helpers behave in the absence of pkgdown", {
 test_that("pkgdown_config_meta() returns a list", {
   create_local_package()
   local_interactive(FALSE)
-  with_mock(
-    check_installed = function(pkg) TRUE,
-    pkgdown_version = function() "1.9000",
-    use_pkgdown()
-  )
+  local_check_installed()
+  local_mocked_bindings(pkgdown_version = function() "1.9000")
+
+  use_pkgdown()
   expect_type(pkgdown_config_meta(), "list")
 
   writeLines(c("home:", "  strip_header: true"), pkgdown_config_path())
@@ -45,11 +44,10 @@ test_that("pkgdown_config_meta() returns a list", {
 test_that("pkgdown_url() returns correct data, warns if pedantic", {
   create_local_package()
   local_interactive(FALSE)
-  with_mock(
-    check_installed = function(pkg) TRUE,
-    pkgdown_version = function() "1.9000",
-    use_pkgdown()
-  )
+  local_check_installed()
+  local_mocked_bindings(pkgdown_version = function() "1.9000")
+
+  use_pkgdown()
 
   # empty config
   expect_null(pkgdown_url())

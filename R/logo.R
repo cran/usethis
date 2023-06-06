@@ -28,7 +28,7 @@ use_logo <- function(img, geometry = "240x278", retina = TRUE) {
 
   if (path_ext(img) == "svg") {
     logo_path <- path("man", "figures", "logo.svg")
-    file_copy(img, proj_path(logo_path))
+    file_copy(img, proj_path(logo_path), overwrite = TRUE)
     ui_done("Copied {ui_path(img)} to {ui_path(logo_path)}")
 
     height <- as.integer(sub(".*x", "", geometry))
@@ -51,8 +51,8 @@ use_logo <- function(img, geometry = "240x278", retina = TRUE) {
   ui_todo("Add logo to your README with the following html:")
   pd_link <- pkgdown_url(pedantic = TRUE)
   if (is.null(pd_link)) {
-    ui_code_block("# {pkg} <img src=\"{proj_rel_path(logo_path)}\" align=\"right\" height=\"{height}\" />")
+    ui_code_block("# {pkg} <img src=\"{proj_rel_path(logo_path)}\" align=\"right\" height=\"{height}\" alt=\"\" />")
   } else {
-    ui_code_block("# {pkg} <a href=\"{pd_link}\"><img src=\"{proj_rel_path(logo_path)}\" align=\"right\" height=\"{height}\" /></a>")
+    ui_code_block("# {pkg} <a href=\"{pd_link}\"><img src=\"{proj_rel_path(logo_path)}\" align=\"right\" height=\"{height}\" alt=\"{pkg} website\" /></a>")
   }
 }

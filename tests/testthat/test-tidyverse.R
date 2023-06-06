@@ -13,7 +13,6 @@ test_that("use_tidy_description() alphabetises dependencies and remotes", {
 })
 
 test_that("use_tidy_dependencies() isn't overly informative", {
-  skip_on_cran()
   skip_if_offline("github.com")
 
   create_local_package(fs::path_temp("tidydeps"))
@@ -23,26 +22,14 @@ test_that("use_tidy_dependencies() isn't overly informative", {
   expect_snapshot(use_tidy_dependencies())
 })
 
-test_that("use_tidy_eval() inserts the template file and Imports rlang", {
-  skip_if_not_installed("roxygen2")
-
-  pkg <- create_local_package()
-  use_tidy_eval()
-  expect_match(dir_ls(proj_path("R")), "utils-tidy-eval.R")
-  expect_match(desc::desc_get("Imports", pkg), "rlang")
-})
-
 test_that("use_tidy_GITHUB-STUFF() adds and Rbuildignores files", {
   local_interactive(FALSE)
+  local_target_repo_spec("OWNER/REPO")
+
   create_local_package()
   use_git()
-
-  with_mock(
-    target_repo_spec = function(...) "OWNER/REPO", {
-      use_tidy_contributing()
-      use_tidy_support()
-    }
-  )
+  use_tidy_contributing()
+  use_tidy_support()
   use_tidy_issue_template()
   use_tidy_coc()
   expect_proj_file(".github/CONTRIBUTING.md")
@@ -54,13 +41,11 @@ test_that("use_tidy_GITHUB-STUFF() adds and Rbuildignores files", {
 
 test_that("use_tidy_github() adds and Rbuildignores files", {
   local_interactive(FALSE)
+  local_target_repo_spec("OWNER/REPO")
+
   create_local_package()
   use_git()
-
-  with_mock(
-    target_repo_spec = function(...) "OWNER/REPO",
-    use_tidy_github()
-  )
+  use_tidy_github()
   expect_proj_file(".github/CONTRIBUTING.md")
   expect_proj_file(".github/ISSUE_TEMPLATE/issue_template.md")
   expect_proj_file(".github/SUPPORT.md")

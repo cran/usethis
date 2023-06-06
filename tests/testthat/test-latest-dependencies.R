@@ -1,22 +1,41 @@
-test_that("use_tidy_versions() specifies a version for dependencies", {
-  pkg <- create_local_package()
+test_that("sets version for imports & depends dependencies", {
+  skip_on_cran()
+  withr::local_options(list(repos = c(CRAN = "https://cloud.r-project.org")))
+
+  create_local_package()
   use_package("usethis")
-  use_package("desc")
-  use_package("withr", "Suggests")
-  use_package("gh", "Suggests")
+  use_package("desc", "Depends")
   use_latest_dependencies()
-  desc <- read_utf8(proj_path("DESCRIPTION"))
-  desc <- grep("usethis|desc|withr|gh", desc, value = TRUE)
-  expect_true(all(grepl("\\(>= [0-9.]+\\)", desc)))
+
+  deps <- proj_deps()
+  expect_equal(
+    deps$version[deps$package %in% c("usethis", "desc")] == "*",
+    c(FALSE, FALSE)
+  )
 })
 
-test_that("use_tidy_versions() does nothing for a base package", {
-  ## if we ever depend on a recommended package, could beef up this test a bit
-  pkg <- create_local_package()
-  use_package("tools")
-  use_package("stats", "Suggests")
+test_that("doesn't affect suggests", {
+  skip_on_cran()
+  withr::local_options(list(repos = c(CRAN = "https://cloud.r-project.org")))
+
+  create_local_package()
+  use_package("cli", "Suggests")
   use_latest_dependencies()
-  desc <- read_utf8(proj_path("DESCRIPTION"))
-  desc <- grep("tools|stats", desc, value = TRUE)
-  expect_false(any(grepl("\\(>= [0-9.]+\\)", desc)))
+
+  deps <- proj_deps()
+  expect_equal(deps$version[deps$package == "cli"], "*")
 })
+
+test_that("does nothing for a base package", {
+  skip_on_cran()
+  withr::local_options(list(repos = c(CRAN = "https://cloud.r-project.org")))
+
+  create_local_package()
+  use_package("tools")
+  # if usethis ever depends on a recommended package, we could test that here too
+  use_latest_dependencies()
+
+  deps <- proj_deps()
+  expect_equal(deps$version[deps$package == "tools"], "*")
+})
+

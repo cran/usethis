@@ -1,25 +1,37 @@
 #' Depend on another package
 #'
+#' @description
+
 #' `use_package()` adds a CRAN package dependency to `DESCRIPTION` and offers a
-#' little advice about how to best use it. `use_dev_package()` adds a
-#' dependency on an in-development package, adding the dev repo to `Remotes` so
-#' it will be automatically installed from the correct location.
+#' little advice about how to best use it. `use_dev_package()` adds a dependency
+#' on an in-development package, adding the dev repo to `Remotes` so it will be
+#' automatically installed from the correct location. There is no helper to
+#' remove a dependency: to do that, simply remove that package from your
+#' `DESCRIPTION` file.
+#'
+#' `use_package()` exists to support a couple of common maneuvers:
+#' * Add a dependency to `Imports` or `Suggests` or `LinkingTo`.
+#' * Add a minimum version to a dependency.
+#' * Specify the minimum supported version for R.
+#'
+#' `use_package()` probably works for slightly more exotic modifications, but at
+#' some point, you should edit `DESCRIPTION` yourself by hand. There is no
+#' intention to account for all possible edge cases.
 #'
 #' @param package Name of package to depend on.
 #' @param type Type of dependency: must be one of "Imports", "Depends",
 #'   "Suggests", "Enhances", or "LinkingTo" (or unique abbreviation). Matching
 #'   is case insensitive.
-#' @param min_version Optionally, supply a minimum version for the package.
-#'   Set to `TRUE` to use the currently installed version.
+#' @param min_version Optionally, supply a minimum version for the package. Set
+#'   to `TRUE` to use the currently installed version.
 #' @param remote By default, an `OWNER/REPO` GitHub remote is inserted.
 #'   Optionally, you can supply a character string to specify the remote, e.g.
 #'   `"gitlab::jimhester/covr"`, using any syntax supported by the [remotes
 #'   package](
 #'   https://remotes.r-lib.org/articles/dependencies.html#other-sources).
 #'
-#' @seealso The [dependencies
-#'   section](https://r-pkgs.org/description.html#dependencies) of [R
-#'   Packages](https://r-pkgs.org).
+#' @seealso The [dependencies section](https://r-pkgs.org/dependencies-mindset-background.html) of
+#'   [R Packages](https://r-pkgs.org).
 #'
 #' @export
 #' @examples
@@ -27,6 +39,9 @@
 #' use_package("ggplot2")
 #' use_package("dplyr", "suggests")
 #' use_dev_package("glue")
+#'
+#' # Depend on R version 4.1
+#' use_package("R", type = "Depends", min_version = "4.1")
 #' }
 use_package <- function(package, type = "Imports", min_version = NULL) {
   if (type == "Imports") {
@@ -56,21 +71,26 @@ use_dev_package <- function(package, type = "Imports", remote = NULL) {
 }
 
 use_remote <- function(package, package_remote = NULL) {
-  remotes <- desc::desc_get_remotes(proj_get())
+  desc <- proj_desc()
+
+  remotes <- desc$get_remotes()
   if (any(grepl(package, remotes))) {
     return(invisible())
   }
 
   if (is.null(package_remote)) {
-    desc <- desc::desc(package = package)
-    package_remote <- package_remote(desc)
+    package_desc <- desc::desc(package = package)
+    package_remote <- package_remote(package_desc)
   }
 
   ui_done("
     Adding {ui_value(package_remote)} to {ui_field('Remotes')} field in \\
     DESCRIPTION")
   remotes <- c(remotes, package_remote)
-  desc::desc_set_remotes(remotes, file = proj_get())
+
+  desc$set_remotes(remotes)
+  desc$write()
+
   invisible()
 }
 
@@ -126,6 +146,9 @@ refuse_package <- function(package, verboten) {
 how_to_use <- function(package, type) {
   types <- tolower(c("Imports", "Depends", "Suggests", "Enhances", "LinkingTo"))
   type <- match.arg(tolower(type), types)
+  if (package == "R" && type == "depends") {
+    return("")
+  }
 
   switch(type,
     imports = ui_todo("Refer to functions with {ui_code(paste0(package, '::fun()'))}"),
@@ -140,7 +163,7 @@ how_to_use <- function(package, type) {
 }
 
 suggests_usage_hint <- function(package) {
-  imports_rlang <- desc::desc_has_dep("rlang", type = "Imports", proj_get())
+  imports_rlang <- proj_desc()$has_dep("rlang", type = "Imports")
   if (imports_rlang) {
     code1 <- glue('rlang::is_installed("{package}")')
     code2 <- glue('rlang::check_installed("{package}")')

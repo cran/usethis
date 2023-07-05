@@ -1,3 +1,9 @@
+# usethis 2.2.2
+
+* Implicit usage of `numeric_version()` via comparison now always provides
+  character input. This is in response to a request from CRAN to anticipate
+  future solutions to <https://bugs.r-project.org/show_bug.cgi?id=18548>.
+
 # usethis 2.2.1
 
 * Internal helper `cran_version()`, used in functions such as

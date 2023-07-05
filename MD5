@@ -1,7 +1,7 @@
-0520d80cd3556408b90949be34d5be04 *DESCRIPTION
+230df86fcec41364bfc64d83d51971f9 *DESCRIPTION
 764bb5aec2dc3bef4e44f1387ec895b3 *LICENSE
 529741f3f194b95689ce404d69de4f9c *NAMESPACE
-42c95e95ebd4613fb239fc13d03865ee *NEWS.md
+9a6f7ad2cd856602cf02308a4bc05709 *NEWS.md
 4efe06b731ed3b39dda06394d21220e3 *R/addin.R
 db85bfa7c5359f2e9ec3a6964b3ebeb5 *R/author.R
 385a15aaacaf2970372cd47a661b01cc *R/badge.R
@@ -293,7 +293,7 @@ bf89b424b9fbb8d488d29e701d174437 *tests/testthat/ref/foo-loose-dropbox.zip
 a783d3efd49413330a902d71111392f8 *tests/testthat/ref/yo/subdir2/file2.txt
 ec2e5afe355da6c62385de8900afda93 *tests/testthat/setup.R
 be3f37f889600d912c941dc32561f7e6 *tests/testthat/test-addin.R
-12467da597853104f26f88f291a48c25 *tests/testthat/test-author.R
+b62ded1f27c97444491b67d9ce057530 *tests/testthat/test-author.R
 86aef0307c8ecfb78c84f05a8f613886 *tests/testthat/test-badge.R
 b7fb3ef24a5baed105e5a75eb9b95638 *tests/testthat/test-block.R
 52ff4420edafd87e59d0e51e7d58a572 *tests/testthat/test-browse.R
@@ -331,7 +331,7 @@ b8b361006ef81219f47b5721baddaa4f *tests/testthat/test-pkgdown.R
 df955c3c51bf1dc38c0f563b4623bece *tests/testthat/test-proj-desc.R
 b50d093dc06bfe22411ef9ae467924be *tests/testthat/test-proj.R
 95cbac853276f4a3c607ef67e8194905 *tests/testthat/test-r.R
-718f77c1304383eaf24ff73b9b4893b1 *tests/testthat/test-rcpp.R
+c4f36abe3c8e08b27a9796e4d9cdd779 *tests/testthat/test-rcpp.R
 5bd15a12c837e8303cde01022ee99faa *tests/testthat/test-readme.R
 732835e4043f7b18c0143194c9a0d785 *tests/testthat/test-release.R
 6fead9313fa66544a653f015167a7542 *tests/testthat/test-rename-files.R
@@ -343,7 +343,7 @@ c53db495d54843c7a3c8e381d7d66a3e *tests/testthat/test-rstudio.R
 02b6cbe72fab99b5cc68fac1bc61109d *tests/testthat/test-test.R
 01ff827ba9e0d58b71552e7bc2cd3c6f *tests/testthat/test-testthat.R
 80671a392abe6a1337a5ab3499985e74 *tests/testthat/test-tibble.R
-a701b874fb02f77b6d7ae12211e32724 *tests/testthat/test-tidyverse.R
+f285bea1465620b27791e01b083379b4 *tests/testthat/test-tidyverse.R
 757806994ce9dbcbed5318d1e550b8d6 *tests/testthat/test-tutorial.R
 ae224e355733662cefea3cfb5d0681bf *tests/testthat/test-ui.R
 1bd471fcb58147ad75156edec6578d0d *tests/testthat/test-upkeep.R

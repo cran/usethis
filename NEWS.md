@@ -1,3 +1,22 @@
+# usethis 3.1.0
+
+* `use_vignette()` and `use_article()` support Quarto. The `name` of the new
+  vignette or article can optionally include a file extension to signal whether
+  `.Rmd` or `.qmd` is desired, with `.Rmd` remaining the default for now. Thanks
+  to @olivroy for getting the ball rolling (#1997).
+
+* `use_data()` defaults to serialization version 3 (@laurabrianna, #2044).
+
+* `use_package()` can lower a minimum version requirement
+  (@jplecavalier, #1957).
+
+* `use_release_issue()` only suggests doing reverse dependency checks if there
+  are, in fact, reverse dependencies (#1817, @seankross).
+
+* `use_tidy_upkeep_issue()` records the year it is being run in the
+  `Config/usethis/upkeep` field in DESCRIPTION. If this value exists, it is
+  used to filter the checklist when making the issue.
+
 # usethis 3.0.0
 
 ## Transition to cli package for UI
@@ -69,9 +88,9 @@ Function arguments that are removed:
 * `use_standalone()` inserts an improved header that includes the code needed to
   update the standalone file (@krlmlr, #1903).
 
-* `use_release_issue()` and `use_upkeep()` behave better when the user has a
-  fork. The user is asked just once to choose between `origin` and `upstream` as
-  the target repo (#2023).
+* `use_release_issue()` and `use_upkeep_issue()` behave better when the user has
+  a fork. The user is asked just once to choose between `origin` and `upstream`
+  as the target repo (#2023).
 
 * The README templates now recommend [pak](https://pak.r-lib.org) instead of
   devtools for package installation (@olivroy, #1723).

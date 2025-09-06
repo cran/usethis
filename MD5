@@ -1,7 +1,7 @@
-88ddf8738945c7bc6ab32055caf87d52 *DESCRIPTION
+7e92cc317dcdc54624859f5e16c08247 *DESCRIPTION
 b0718735f63a717a779efe237aee6c96 *LICENSE
 455b7dccb1848ab22a38f94e52b05802 *NAMESPACE
-b13e1db605b4d223c4316c1a7a3c492b *NEWS.md
+6834732b0a6f69c55aac60e96133fd81 *NEWS.md
 eaff54e68339fd1440897277541f5f5b *R/addin.R
 6bc5920a63a7985f2fbe2a5688f57a46 *R/air.R
 2a4d9021bc7e3f80ee9de27a0a3edf6a *R/author.R
@@ -15,7 +15,7 @@ c106712c4a2f5a261a2fd573ce225b0f *R/course.R
 09dc50d130d1061837074cc8af84c368 *R/coverage.R
 a254be9ba651355edb570fbd4e842eb2 *R/cpp11.R
 269c9cd1fe56705bd5c3430a46f7366a *R/cran.R
-42cdbccc34616141b5e4a4f2a13ca248 *R/create.R
+3b3afcc5938cde9ee97f5a4bd169d987 *R/create.R
 20a55fa4cb553df693e89018cb685684 *R/data-table.R
 54ece23dea75a08d839e30dd26941635 *R/data.R
 6f7601dc157476e8be8242a9eb4b1768 *R/description.R
@@ -49,11 +49,11 @@ c5fa409f6abc5a5fde28bfcffb7dfc70 *R/pkgdown.R
 54bcaa3b61c11b87d3ed71427d6c1fef *R/positron.R
 d23c869bc4aa91a14812730a3224e920 *R/pr.R
 31760daf2820ab6811d9962600009a8e *R/proj-desc.R
-1cc7b493f291bd313b98252374af534e *R/proj.R
+22e0303ba765b7cdbcea2a867d47aeed *R/proj.R
 05b9f73faf7089c6df1cff05a2252d42 *R/r.R
 f800ee9795e87152c4aa1688e7de61c6 *R/rcpp.R
 c0a756b4448cce3b0b5a2143b2ac33a8 *R/readme.R
-8fb2336283d6a6ccd532e8602a783712 *R/release.R
+332b821dd4b0cfe826e3f54c839e890d *R/release.R
 598a1abbd83cd09042916f4ac50a18e8 *R/rename-files.R
 3e983397855a15305e1b7ede0ca4536e *R/revdep.R
 2e15f31ee2ae38dae74501bf5ff3269b *R/rmarkdown.R
@@ -259,7 +259,7 @@ e45869b2c0d39910bedeb8f28cc8150a *tests/testthat/_snaps/proj-desc.md
 6c650f7c9b9374267a878fbeb89a5637 *tests/testthat/_snaps/proj.md
 5f3b4338e9534f948656349c58096540 *tests/testthat/_snaps/r.md
 48a49bf533b15b2f370b5f4e504ca422 *tests/testthat/_snaps/readme.md
-d8dedafe6e61a3e681c2bfb64e52e558 *tests/testthat/_snaps/release.md
+62ce6161b305d68394f9f7e061932d1d *tests/testthat/_snaps/release.md
 56c3795881f54561cf4feca2c21a5622 *tests/testthat/_snaps/rename-files.md
 410d84e97bf0f21d81153d3739d698a6 *tests/testthat/_snaps/roxygen.md
 080c29a019cd9e469e525d6222a364de *tests/testthat/_snaps/rstudio.md
@@ -307,7 +307,7 @@ b279bd713dabebad7aec7a771c1fcb05 *tests/testthat/test-code-of-conduct.R
 ac651839e7a400c023e382eb6d589625 *tests/testthat/test-coverage.R
 0d1eb4d3f9a88edd4b29bf8b9b6a6bf0 *tests/testthat/test-cpp11.R
 429fff6097b4739fcf08c5aea867bf66 *tests/testthat/test-cran.R
-9e8fdfad57ea979bf7ca4676f769cce2 *tests/testthat/test-create.R
+a10c069ef6211342aac7daf84efa3003 *tests/testthat/test-create.R
 3472bff77547bbb83fab15834b764b3b *tests/testthat/test-data-table.R
 907a28a115d329f96a5d9388645e03f4 *tests/testthat/test-data.R
 af8a21aac23502b4165b0c5890f35369 *tests/testthat/test-description.R

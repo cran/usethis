@@ -1,3 +1,8 @@
+# usethis 3.2.1
+
+* `create_quarto_project()` exits early if the Quarto CLI does not appear to be
+  installed and related tests are skipped (#2162).
+
 # usethis 3.2.0
 
 ## Formatting
